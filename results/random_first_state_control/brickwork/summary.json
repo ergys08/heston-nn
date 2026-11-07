@@ -1,0 +1,13 @@
+{
+  "ansatz": "brickwork",
+  "layers": 18,
+  "num_angles": 520,
+  "train_fidelity_last_epoch": 0.9973479575639689,
+  "mean_future_fidelity": 0.969882131964784,
+  "median_future_fidelity": 0.9705615950478191,
+  "worst_future_fidelity": 0.7874183623389657,
+  "future_fidelity_ge_0_99": 15,
+  "num_future_states": 100,
+  "future_state_sha256": "e17c6466363968f7e6cac745c5f393b112320b3139f6b5f0156ebd22d54feead",
+  "epochs": 10
+}

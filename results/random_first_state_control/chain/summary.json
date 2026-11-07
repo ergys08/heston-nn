@@ -1,0 +1,13 @@
+{
+  "ansatz": "chain",
+  "layers": 18,
+  "num_angles": 304,
+  "train_fidelity_last_epoch": 0.997079838969288,
+  "mean_future_fidelity": 0.9730211995610266,
+  "median_future_fidelity": 0.9738473228406159,
+  "worst_future_fidelity": 0.7880098019518115,
+  "future_fidelity_ge_0_99": 21,
+  "num_future_states": 100,
+  "future_state_sha256": "e17c6466363968f7e6cac745c5f393b112320b3139f6b5f0156ebd22d54feead",
+  "epochs": 10
+}

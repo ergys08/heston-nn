@@ -1,0 +1,13 @@
+{
+  "ansatz": "ring",
+  "layers": 16,
+  "num_angles": 272,
+  "train_fidelity_last_epoch": 0.9804370627464956,
+  "mean_future_fidelity": 0.9657216534444953,
+  "median_future_fidelity": 0.9668546113086421,
+  "worst_future_fidelity": 0.7905229090076209,
+  "future_fidelity_ge_0_99": 0,
+  "num_future_states": 100,
+  "future_state_sha256": "e17c6466363968f7e6cac745c5f393b112320b3139f6b5f0156ebd22d54feead",
+  "epochs": 10
+}

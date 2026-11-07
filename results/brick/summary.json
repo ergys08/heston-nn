@@ -1,0 +1,20 @@
+{
+  "training_cutoff": "2013-08-08",
+  "historical_training_states": 150,
+  "synthetic_training_states": 850,
+  "future_test_states": 100,
+  "topology": "brickwork",
+  "layers": 18,
+  "rotation": "yz",
+  "augmentation_max_fs_distance_rad": 0.10095073434223624,
+  "mean_future_fidelity": 0.9934692484667209,
+  "median_future_fidelity": 0.9939722035601573,
+  "min_future_fidelity": 0.9793106439402179,
+  "fraction_future_fidelity_above_0_99": 0.98,
+  "last_train_epoch_fidelity": 0.993809202090953,
+  "seed": 42,
+  "epochs": 10,
+  "batch_size": 64,
+  "learning_rate": 0.003,
+  "weight_decay": 1e-05
+}
