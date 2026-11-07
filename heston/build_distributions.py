@@ -8,6 +8,10 @@ import numpy as np
 from .distributions import HestonParameters, discretize_pdf, heston_pdf
 
 DATA_FILE = Path(__file__).with_name("heston_params_2013.csv")
+DATA_FILES = {
+    2013: DATA_FILE,
+    2020: Path(__file__).with_name("heston_params_2020.csv"),
+}
 
 
 @dataclass
@@ -26,18 +30,33 @@ class DistributionBatch:
         return np.sqrt(self.probabilities)
 
 
-def read_calibrations(path=DATA_FILE):
-    """Read original 2013 CSV; source 'sigma' is Heston vol-of-vol xi."""
+def read_calibrations(path=DATA_FILE, *, exclude_degenerate=False):
+    """Read chronological Heston calibrations from 2013 or 2020.
+
+    Both published datasets are kept intact. The original 2013 'sigma'
+    and 2020 'eta' headers denote the same Heston vol-of-vol parameter,
+    called 'xi' in HestonParameters. The 2020 'degenerate' flag is
+    preserved upstream; it is excluded only when requested.
+    """
+    path = Path(path)
     rows = []
-    with open(path, newline="", encoding="utf-8") as file:
+    with path.open(newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file)
-        required = {"date", "v0", "kappa", "theta", "sigma", "rho"}
-        if not required.issubset(reader.fieldnames or []):
-            raise ValueError("Missing Heston calibration columns")
+        fields = set(reader.fieldnames or ())
+        required = {"date", "v0", "kappa", "theta", "rho"}
+        if not required.issubset(fields):
+            raise ValueError(f"Missing Heston calibration columns in {path}")
+        vol_header = "sigma" if "sigma" in fields else "eta" if "eta" in fields else None
+        if vol_header is None:
+            raise ValueError(f"Expected sigma or eta vol-of-vol column in {path}")
+        if exclude_degenerate and "degenerate" not in fields:
+            raise ValueError(f"Cannot exclude degenerate rows: no flag in {path}")
         for row in reader:
+            if exclude_degenerate and row["degenerate"].strip().lower() in ("true", "1", "yes"):
+                continue
             rows.append((row["date"], HestonParameters(
                 v0=float(row["v0"]), kappa=float(row["kappa"]),
-                theta=float(row["theta"]), xi=float(row["sigma"]), rho=float(row["rho"]),
+                theta=float(row["theta"]), xi=float(row[vol_header]), rho=float(row["rho"]),
             )))
     dates = [date for date, _ in rows]
     if not dates or dates != sorted(set(dates)):
