@@ -1,4 +1,4 @@
-"""Compare covering counts for 2013 Heston states and matched random walks.
+"""Compare covering counts for 2013/2020 Heston states and matched random walks.
 
 Run from the repository root:
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .build_distributions import build_distributions, read_calibrations
+from .build_distributions import DATA_FILES, build_distributions, read_calibrations
 from .covering_number import covering_from_fidelities, fidelity_matrix
 from .random_walk import consecutive_step_lengths, matched_step_random_walk
 
@@ -50,6 +50,8 @@ def run_comparison(
     time_limit: float | None = None,
     output_dir: Path | None = Path("covering_results"),
     verify_fft: bool = True,
+    calibration_path: Path | None = None,
+    exclude_degenerate: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """Return (summary_rows, per_walk_rows); optionally save CSVs."""
     if n_walks < 1:
@@ -60,7 +62,7 @@ def run_comparison(
         raise ValueError("At least one fidelity threshold is required")
 
     data = build_distributions(
-        read_calibrations(),
+        read_calibrations(calibration_path or DATA_FILES[2013], exclude_degenerate=exclude_degenerate),
         n_qubits=8,
         cutoff=2.5,
         n_fft=16384,
@@ -129,6 +131,10 @@ def run_comparison(
             "cover_method": method,
             "proven_sample_centred_optimum": method == "exact",
             "heston_cover_count": heston_results[col].count,
+            "n_heston_states": len(historical),
+            "heston_cover_fraction": heston_results[col].count / len(historical),
+            "random_cover_fraction_mean": float(np.mean(vals)) / len(historical),
+            "heston_to_random_cover_ratio": heston_results[col].count / float(np.mean(vals)),
             "random_cover_mean": float(np.mean(vals)),
             "random_cover_std": float(np.std(vals)),
             "random_cover_p025": float(np.quantile(vals, 0.025)),
@@ -156,6 +162,12 @@ def run_comparison(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--year", type=int, choices=sorted(DATA_FILES), default=2013,
+                        help="Dataset year (2013 or 2020); default preserves legacy behaviour.")
+    parser.add_argument("--calibrations", type=Path, default=None,
+                        help="Override with a custom chronological calibration CSV.")
+    parser.add_argument("--exclude-degenerate", action="store_true",
+                        help="Exclude rows flagged as degenerate (2020 only).")
     parser.add_argument("--n-walks", type=int, default=100)
     parser.add_argument("--seed", type=int, default=12345)
     parser.add_argument(
@@ -165,7 +177,8 @@ def main() -> None:
     parser.add_argument("--fidelities", type=float, nargs="+", default=DEFAULT_FIDELITIES)
     parser.add_argument("--method", choices=("greedy", "exact"), default="greedy")
     parser.add_argument("--time-limit", type=float, default=None, help="MILP seconds per solve")
-    parser.add_argument("--output-dir", type=Path, default=Path("covering_results"))
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help="Defaults to covering_results (2013) or covering_results_2020 (2020).")
     parser.add_argument("--no-verify-fft", action="store_true")
     args = parser.parse_args()
     run_comparison(
@@ -175,8 +188,11 @@ def main() -> None:
         fidelities=tuple(args.fidelities),
         method=args.method,
         time_limit=args.time_limit,
-        output_dir=args.output_dir,
+        output_dir=args.output_dir if args.output_dir is not None else Path(
+            "covering_results" if args.year == 2013 else "covering_results_2020"),
         verify_fft=not args.no_verify_fft,
+        calibration_path=args.calibrations or DATA_FILES[args.year],
+        exclude_degenerate=args.exclude_degenerate,
     )
 
 
