@@ -88,6 +88,50 @@ def main() -> None:
     print(f"Generated {len(augmented.states)} synthetic states; "
           f"max FS radius={augmented.max_fs_distance:.6f} rad; "
           f"actual max={augmented.fs_distances.max(initial=0):.6f} rad", flush=True)
+    # Exact first-network settings; recorded before fitting or future testing.
+    settings = {
+        "experiment": "150 historical + 850 amplitude-space augmented states",
+        "historical_csv": args.historical_csv,
+        "future_csv": args.future_csv,
+        "train_start_date": train_dates[0],
+        "training_cutoff": cutoff_date,
+        "future_start_date": future_dates[0],
+        "historical_training_states": len(anchors),
+        "synthetic_training_states": len(augmented.states),
+        "augmentation": {
+            "method": "smooth Gaussian noise in amplitude space; positive multiplicative reference, then spherical interpolation",
+            "parameters_perturbed": False,
+            "parent_selection": "balanced and randomly shuffled",
+            "max_fs_radius_rad": augmented.max_fs_distance,
+            "radius_quantile": args.radius_quantile,
+            "min_radius_fraction": 0.1,
+            "max_radius_fraction": 1.0,
+            "noise_gaussian_smoothing_sigma_bins": 2.5,
+            "noise_kernel_halfwidth_bins": 8,
+            "reference_strength_uniform": [1.1, 2.1],
+            "exact_per_sample_perturbations": "training_states.npz:synthetic_fs_distances",
+            "exact_parent_indices": "training_states.npz:synthetic_parent_indices",
+        },
+        "training": {
+            "architecture": args.topology,
+            "qubits": 8,
+            "layers": args.layers,
+            "rotation": args.rotation,
+            "network": "Linear(256,512)-Tanh-Linear(512,P)-Tanh",
+            "loss": "1-|overlap|^2",
+            "optimizer": "Adam",
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+            "learning_rate": args.learning_rate,
+            "weight_decay": args.weight_decay,
+            "seed": args.seed,
+            "device": args.device,
+        },
+        "test": {"num_future_states": len(future_states), "frozen_network": True},
+    }
+    (output_dir / "experiment_manifest.json").write_text(
+        json.dumps(settings, indent=2) + "\n", encoding="utf-8"
+    )
     np.savez_compressed(
         output_dir / "training_states.npz", historical=anchors,
         synthetic=augmented.states, synthetic_parent_indices=augmented.parent_indices,
