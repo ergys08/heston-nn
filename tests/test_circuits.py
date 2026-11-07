@@ -78,7 +78,7 @@ def test_yz_matrix_order():
         (torch.stack((torch.cos(aa), -torch.sin(aa))),
          torch.stack((torch.sin(aa), torch.cos(aa))))
     ).to(torch.complex128)
-    rz = torch.diag(torch.exp(1j * torch.tensor([-b / 2, b / 2])))
+    rz = torch.diag(torch.exp(1j * torch.tensor([-b / 2, b / 2], dtype=torch.float64)))
     torch.testing.assert_close(actual, ry @ rz, rtol=1e-7, atol=1e-7)
 
 
