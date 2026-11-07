@@ -50,6 +50,8 @@ def run_comparison(
     time_limit: float | None = None,
     output_dir: Path | None = Path("covering_results"),
     verify_fft: bool = True,
+    n_fft: int = 16384,
+    fft_halfwidth: float = 3.5,
     calibration_path: Path | None = None,
     exclude_degenerate: bool = False,
 ) -> tuple[list[dict], list[dict]]:
@@ -65,8 +67,8 @@ def run_comparison(
         read_calibrations(calibration_path or DATA_FILES[2013], exclude_degenerate=exclude_degenerate),
         n_qubits=8,
         cutoff=2.5,
-        n_fft=16384,
-        halfwidth=3.5,
+        n_fft=n_fft,
+        halfwidth=fft_halfwidth,
         maturity=1.0,
         drift=0.05,
         verify_grid=verify_fft,
@@ -78,6 +80,11 @@ def run_comparison(
         f"Loaded {len(historical)} Heston states; {historical.shape[1]} amplitudes; "
         f"{len(steps)} chronological steps."
     )
+    print(f"FFT: n_fft={n_fft}, halfwidth={fft_halfwidth}; state bins in [-2.5, 2.5]")
+    print(f"Retained mass: min={np.min(data.retained_masses):.6f}, "
+          f"median={np.median(data.retained_masses):.6f}, "
+          f"max={np.max(data.retained_masses):.6f}; "
+          f"below 99%: {np.sum(data.retained_masses < 0.99)}")
     print(
         f"Walk subspace dimension={subspace_dimension} (sphere dimension "
         f"{subspace_dimension - 1}); {n_walks} seeded walks."
@@ -132,6 +139,9 @@ def run_comparison(
             "proven_sample_centred_optimum": method == "exact",
             "heston_cover_count": heston_results[col].count,
             "n_heston_states": len(historical),
+            "fft_halfwidth": fft_halfwidth,
+            "n_fft": n_fft,
+            "retained_mass_min": float(np.min(data.retained_masses)),
             "heston_cover_fraction": heston_results[col].count / len(historical),
             "random_cover_fraction_mean": float(np.mean(vals)) / len(historical),
             "heston_to_random_cover_ratio": heston_results[col].count / float(np.mean(vals)),
@@ -155,6 +165,10 @@ def run_comparison(
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         _write_csv(output_dir / "covering_summary.csv", summary_rows)
+        _write_csv(output_dir / "retained_masses.csv", [
+            {"date": date, "retained_mass": float(mass)}
+            for date, mass in zip(data.dates, data.retained_masses)
+        ])
         _write_csv(output_dir / "covering_random_walks.csv", per_walk_rows)
         print(f"\nResults written to {output_dir.resolve()}")
     return summary_rows, per_walk_rows
@@ -180,6 +194,10 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=None,
                         help="Defaults to covering_results (2013) or covering_results_2020 (2020).")
     parser.add_argument("--no-verify-fft", action="store_true")
+    parser.add_argument("--fft-halfwidth", type=float, default=None,
+                        help="FFT grid [-H,H]. Default H=3.5 for 2013, H=25 for 2020.")
+    parser.add_argument("--n-fft", type=int, default=None,
+                        help="FFT points. Default 16384 for 2013, 131072 for 2020.")
     args = parser.parse_args()
     run_comparison(
         n_walks=args.n_walks,
@@ -191,6 +209,10 @@ def main() -> None:
         output_dir=args.output_dir if args.output_dir is not None else Path(
             "covering_results" if args.year == 2013 else "covering_results_2020"),
         verify_fft=not args.no_verify_fft,
+        fft_halfwidth=args.fft_halfwidth if args.fft_halfwidth is not None else (
+            25.0 if args.year == 2020 else 3.5),
+        n_fft=args.n_fft if args.n_fft is not None else (
+            131072 if args.year == 2020 else 16384),
         calibration_path=args.calibrations or DATA_FILES[args.year],
         exclude_degenerate=args.exclude_degenerate,
     )
