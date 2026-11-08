@@ -54,6 +54,7 @@ def run_comparison(
     fft_halfwidth: float = 3.5,
     calibration_path: Path | None = None,
     exclude_degenerate: bool = False,
+    nonnegative: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """Return (summary_rows, per_walk_rows); optionally save CSVs."""
     if n_walks < 1:
@@ -104,7 +105,8 @@ def run_comparison(
     for trial in range(n_walks):
         trial_seed = seed + trial
         walk = matched_step_random_walk(
-            historical, seed=trial_seed, subspace_dimension=subspace_dimension
+            historical, seed=trial_seed, subspace_dimension=subspace_dimension,
+            nonnegative=nonnegative,
         )
         if not np.allclose(walk[0], historical[0], atol=1e-12):
             raise ArithmeticError("Random walk did not start at the first Heston state")
@@ -125,6 +127,7 @@ def run_comparison(
                     "radius_rad": float(np.arccos(np.sqrt(f))),
                     "cover_method": method,
                     "random_cover_count": int(count),
+                    "amplitude_domain": "nonnegative" if nonnegative else "signed_real",
                 }
             )
 
@@ -135,6 +138,7 @@ def run_comparison(
         row = {
             "min_fidelity": f,
             "radius_rad": float(np.arccos(np.sqrt(f))),
+            "amplitude_domain": "nonnegative" if nonnegative else "signed_real",
             "cover_method": method,
             "proven_sample_centred_optimum": method == "exact",
             "heston_cover_count": heston_results[col].count,
@@ -193,6 +197,8 @@ def main() -> None:
     parser.add_argument("--time-limit", type=float, default=None, help="MILP seconds per solve")
     parser.add_argument("--output-dir", type=Path, default=None,
                         help="Defaults to covering_results (2013) or covering_results_2020 (2020).")
+    parser.add_argument("--nonnegative", action="store_true",
+                        help="Keep random-walk amplitudes >= 0 (positive-orthant control).")
     parser.add_argument("--no-verify-fft", action="store_true")
     parser.add_argument("--fft-halfwidth", type=float, default=None,
                         help="FFT grid [-H,H]. Default H=3.5 for 2013, H=25 for 2020.")
@@ -207,7 +213,9 @@ def main() -> None:
         method=args.method,
         time_limit=args.time_limit,
         output_dir=args.output_dir if args.output_dir is not None else Path(
-            "covering_results" if args.year == 2013 else "covering_results_2020"),
+            ("covering_results" if args.year == 2013 else "covering_results_2020")
+            + ("_nonnegative" if args.nonnegative else "")
+        ),
         verify_fft=not args.no_verify_fft,
         fft_halfwidth=args.fft_halfwidth if args.fft_halfwidth is not None else (
             25.0 if args.year == 2020 else 3.5),
@@ -215,6 +223,7 @@ def main() -> None:
             131072 if args.year == 2020 else 16384),
         calibration_path=args.calibrations or DATA_FILES[args.year],
         exclude_degenerate=args.exclude_degenerate,
+        nonnegative=args.nonnegative,
     )
 
 
