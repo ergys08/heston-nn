@@ -50,3 +50,33 @@ The 2020 covering command defaults to an FFT grid halfwidth of **25** and **1310
 Default output locations are `covering_results/` (2013) and `covering_results_2020/` (2020). Use `--output-dir` to avoid overwriting results when comparing filtered and unfiltered 2020 samples. The summaries include counts, counts divided by the number of states, and the Heston/random-walk covering ratio. The default greedy method returns a **valid sample-centred cover**, not a certified minimum.
 
 For apples-to-apples geometric comparisons, also compare both years using equally sized chronological windows (e.g. 68 or 71 states) and the same fidelity thresholds. A fraction `count / N` removes the trivial difference in the number of sampled states but does *not* completely remove dependence on sampling density or differing step-size distributions. Inspect retained PDF mass and inversion diagnostics especially for extreme 2020 parameters.
+
+## Nonnegative real-amplitude random-walk controls
+
+By default, `random_walk.py` retains the original **signed-real** great-circle
+walk. To constrain all generated amplitudes to be nonnegative, use:
+
+```bash
+python -m heston.compare_covering --year 2013 --nonnegative --subspace-dimension 256
+python -m heston.compare_covering --year 2013 --nonnegative --subspace-dimension 6
+python -m heston.compare_covering --year 2020 --nonnegative --subspace-dimension 256
+python -m heston.compare_covering --year 2020 --nonnegative --subspace-dimension 6
+```
+
+The default nonnegative output directory has suffix `_nonnegative`.
+Use separate `--output-dir` values for the 6D and 256D runs, otherwise
+the second run will overwrite the first.
+
+This alternative control preserves each historical Fubini--Study step length
+and restricts the entire geodesic path to nonnegative real amplitude vectors.
+It chooses a random nonnegative reference point and interpolates along a
+great-circle arc. **The reference-based directions are not uniformly sampled
+from the feasible positive-orthant tangent directions.** The 6D variant
+uses a fixed positive cone in the span of the initial state and five
+coordinate vectors, not a uniformly random 6D linear subspace. It is thus
+a distinct geometric control, and its covering counts should not be
+identified with those from the original isotropic S^5 or S^255 walks.
+
+This update does not retroactively alter earlier figures or published random
+controls; repeat the covering experiment with `--nonnegative` to generate
+new results.
