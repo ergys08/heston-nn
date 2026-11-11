@@ -8,11 +8,7 @@ from heston.build_distributions import (
     build_distributions,
 )
 
-from .build_distributions import (
-    read_calibrations,
-    build_distributions,
-)
-from .third_party.aqce.AQCE_from_python import AQCE_python
+from heston.third_party.aqce.AQCE_from_python import AQCE_python
 
 
 def main():
@@ -47,8 +43,8 @@ def main():
         target_state=target,
         M_0=0,
         M_delta=1,
-        M_max=3,
-        N=1,
+        M_max=15,
+        N=2,
     )
 
     circuit = QuantumCircuit(8)

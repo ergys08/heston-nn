@@ -1,0 +1,18 @@
+{
+  "year": 2013,
+  "total_completed": 250,
+  "successful_at_min_fidelity": 181,
+  "min_fidelity": 0.995,
+  "fraction_passing": 0.724,
+  "min_observed_fidelity": 0.6396533404322133,
+  "median_observed_fidelity": 0.9984174182209213,
+  "mean_global_ordered_similarity": 0.5014773889912012,
+  "mean_global_edge_overlap": 0.46996966965906883,
+  "mean_adjacent_ordered_similarity": 0.5427160493827161,
+  "number_adjacent_pairs": 135,
+  "number_exact_topologies": 174,
+  "chronological_locality_permutation_p": 0.001996007984031936,
+  "shuffled_adjacent_mean": 0.5016602469135802,
+  "structural_representatives": 144,
+  "structural_overlap_threshold": 0.8
+}
