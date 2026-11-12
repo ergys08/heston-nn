@@ -16,8 +16,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from circuits import run_brickwork_circuit, run_chain_circuit, run_ring_circuit
 from heston.distributions import HestonParameters, heston_pdf, discretize_pdf
-from loss import superencoder_loss
-from mlp import SuperEncoderMLP
+from .loss import superencoder_loss
+from .mlp import SuperEncoderMLP
 
 CIRCUITS = {
     "brickwork": run_brickwork_circuit,

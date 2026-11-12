@@ -8,9 +8,9 @@ from circuits import (
     brickwork_num_parameters, chain_num_parameters, ring_num_parameters,
     run_brickwork_circuit, run_chain_circuit, run_ring_circuit,
 )
-from loss import superencoder_loss
-from mlp import SuperEncoderMLP
-from train import train_superencoder
+from neural_network.loss import superencoder_loss
+from neural_network.mlp import SuperEncoderMLP
+from neural_network.train import train_superencoder
 
 
 @pytest.mark.parametrize("topology,counts,run", [

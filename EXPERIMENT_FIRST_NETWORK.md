@@ -1,6 +1,6 @@
 # First Heston SuperEncoder experiment
 
-The new code lives in the repository root: `synthetic_states.py`, `training_workflow.py`, and `main.py`. It reuses the repository's existing `mlp.py`, `loss.py`, `circuits/`, and `heston/distributions.py`.
+The neural-network implementation lives in `neural_network/` (`train.py`, `mlp.py`, `loss.py`, `synthetic_states.py`, `synthetic_random_states.py`, and `training_workflow.py`). The experiment entry points `main.py` and `run_random_control.py` remain in the repository root. These modules reuse `circuits/` and `heston/distributions.py`.
 
 Dependencies: NumPy and PyTorch.
 
@@ -34,7 +34,7 @@ python main.py --epochs 10 --resume
 For *newly calibrated future dates*, load the already-trained model **without retraining**:
 
 ```python
-from training_workflow import read_heston_states, load_checkpoint, evaluate_network
+from neural_network.training_workflow import read_heston_states, load_checkpoint, evaluate_network
 
 dates, target_states = read_heston_states("my_later_calibrations.csv")
 model = load_checkpoint("results/first_heston_network/model.pt")

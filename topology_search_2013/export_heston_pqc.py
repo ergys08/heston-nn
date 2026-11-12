@@ -5,7 +5,7 @@ Dependencies (in your project's .venv):
     python -m pip install 'qiskit>=2,<3'
 
 Run from the heston-nn repository root:
-    python export_heston_pqc.py
+    python -m topology_search_2013.export_heston_pqc
 
 Outputs: a 24-CX / 192-rotation fixed RZ-RY-RZ template, a table of
 250 different parameter vectors, OpenQASM 3, and fidelity-verification data.
@@ -38,7 +38,7 @@ except ImportError as exc:
         "Qiskit is required. Activate .venv and run: python -m pip install 'qiskit>=2,<3'"
     ) from exc
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = ROOT / "topology_search_2013/results/final/M08_7cce5211/unitaries.npz"
 DEFAULT_TARGETS = ROOT / "aqce_results_2013/target_states.npz"
 DEFAULT_OUTPUT = ROOT / "topology_search_2013/results/pqc_M08_7cce5211"

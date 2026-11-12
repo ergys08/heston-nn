@@ -15,8 +15,8 @@ from pathlib import Path
 
 import numpy as np
 
-from synthetic_random_states import generate_random_states
-from training_workflow import (
+from neural_network.synthetic_random_states import generate_random_states
+from neural_network.training_workflow import (
     read_heston_states, train_network, evaluate_network, nearest_fs_distances,
     save_checkpoint,
 )
