@@ -1,0 +1,67 @@
+{
+ "topology": [
+  [
+   1,
+   5
+  ],
+  [
+   1,
+   2
+  ],
+  [
+   0,
+   1
+  ],
+  [
+   4,
+   5
+  ],
+  [
+   3,
+   4
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   5,
+   7
+  ],
+  [
+   6,
+   7
+  ]
+ ],
+ "M": 8,
+ "depth": 4,
+ "source": "prior:evo:relabel",
+ "full_stage_rank": 0,
+ "coverage": 250,
+ "n_states": 250,
+ "min": 0.9984391311765536,
+ "p5": 0.9989406751527408,
+ "median": 0.9992676489540162,
+ "mean": 0.9993177140859596,
+ "block_updates": 12899392,
+ "seconds": 53.355828792002285,
+ "stage": {
+  "restarts": 64,
+  "prescreen_sweeps": 40,
+  "keep": 6,
+  "sweeps": 3000,
+  "tol": 1e-11,
+  "window": 30,
+  "seed": 2,
+  "complex": true,
+  "name": "final",
+  "states": "all 250",
+  "keep_unitaries": true
+ },
+ "stage_sig": "52af42259c",
+ "restart_sensitivity": {
+  "frac_restarts_within_1e5_of_best": 0.315625,
+  "states_where_median_restart_fails": 0,
+  "states_where_some_restart_fails": 0
+ }
+}
