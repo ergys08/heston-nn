@@ -1,0 +1,51 @@
+{
+  "description": "ONE fixed 8-qubit PQC; independent angles for each 2013 calibration",
+  "saved_U4_matrix_index": "2*bit(a) + bit(b)",
+  "qiskit_local_wire_mapping": "local q0 -> global b, local q1 -> global a",
+  "pair_order": [
+    [
+      1,
+      5
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      5,
+      7
+    ],
+    [
+      6,
+      7
+    ]
+  ],
+  "n_dates": 250,
+  "n_blocks": 8,
+  "n_cx": 24,
+  "n_rz": 128,
+  "n_ry": 64,
+  "n_parameter_angles": 192,
+  "min_block_overlap_up_to_global_phase": 0.9999999999999991,
+  "min_reference_fidelity": 0.9984391311765536,
+  "min_pqc_fidelity": 0.9984391311765518,
+  "max_abs_fidelity_error": 6.439293542825908e-15,
+  "verified_end_to_end": true,
+  "note": "24 CX assumes all-to-all connectivity. Hardware routing may add SWAPs."
+}
