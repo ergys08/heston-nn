@@ -1,0 +1,84 @@
+{
+ "seed": 2013,
+ "threshold": 0.995,
+ "stages": {
+  "screen": {
+   "restarts": 6,
+   "prescreen_sweeps": 25,
+   "keep": 2,
+   "sweeps": 400,
+   "stop_at": 0.99995,
+   "tol": 1e-10,
+   "window": 20,
+   "seed": 0
+  },
+  "full": {
+   "restarts": 16,
+   "prescreen_sweeps": 30,
+   "keep": 4,
+   "sweeps": 800,
+   "stop_at": 0.99995,
+   "tol": 1e-10,
+   "window": 20,
+   "seed": 1
+  },
+  "final": {
+   "restarts": 64,
+   "prescreen_sweeps": 40,
+   "keep": 6,
+   "sweeps": 3000,
+   "tol": 1e-11,
+   "window": 30,
+   "seed": 2,
+   "complex": true
+  }
+ },
+ "screen_hard": 32,
+ "screen_diverse": 8,
+ "resubset_every": 5,
+ "elite_size": 12,
+ "children": 80,
+ "promote": 12,
+ "min_promote": 4,
+ "promote_bar_rank": 6,
+ "operators": {
+  "insert": 0.5,
+  "delete": 0.5,
+  "replace": 3,
+  "move": 2,
+  "swap": 1.5,
+  "relabel": 0.7,
+  "one_point": 1,
+  "aligned": 1,
+  "segment": 1,
+  "prune": 1,
+  "grow": 1,
+  "random": 0.3
+ },
+ "superseded_stages": {
+  "explore_v0 (stage name 'full' in DB rows created before 13:35)": {
+   "restarts": 4,
+   "sweeps": 250,
+   "stop_at": 0.999
+  },
+  "v1": {
+   "screen": {
+    "restarts": 3,
+    "sweeps": 300,
+    "stop_at": 0.9999,
+    "tol": 1e-09,
+    "window": 10,
+    "seed": 0
+   },
+   "full": {
+    "restarts": 4,
+    "sweeps": 400,
+    "stop_at": 0.9999,
+    "tol": 1e-09,
+    "window": 10,
+    "seed": 1
+   },
+   "reason": "4 restarts with tol 1e-9/window 10 under-reported min fidelity by up to ~6e-4 at M>=10 (local optima, early freezing)"
+  }
+ }
+}
