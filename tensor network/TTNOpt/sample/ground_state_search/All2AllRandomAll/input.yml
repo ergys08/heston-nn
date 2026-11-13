@@ -1,0 +1,39 @@
+system:
+    N: 12 # Number of spins
+    # Spin size configuration
+    spin_size: Spinsize.dat
+
+    # Exchange coupling for the XXZ or XYZ model
+    model:
+        type: XYZ # Choose XXZ or XYZ
+        file: XYZ.dat # Pair-variable file containing J_{i,j}, Δ_{i,j}  or Jx_{i,j}, Jy_{i,j}, Jz_{i,j}
+
+    MF_X: MFx.dat
+
+    MF_Y: MFy.dat
+
+    MF_Z: MFz.dat
+
+    SIA: Di.dat
+
+    DM_X: DMx.dat
+
+    DM_Y: DMy.dat
+
+    DM_Z: DMz.dat
+
+numerics:
+    init_tree: 0
+    opt_structure:
+        type: 1
+    initial_bond_dimension: 20
+    max_bond_dimensions: [20] # Maximum bond dimension for each repetition
+    max_num_sweeps: [2]
+    energy_convergence_threshold: 1e-11
+    entanglement_convergence_threshold: 1e-10
+    energy_degeneracy_threshold: 1e-13
+
+output:
+    dir: data
+    single_site: 1
+    two_site: 1

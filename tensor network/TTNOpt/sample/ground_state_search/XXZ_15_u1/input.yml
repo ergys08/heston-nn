@@ -1,0 +1,25 @@
+system:
+    N: 15
+    spin_size: 1/2
+
+    model:
+        type: XXZ
+        file: XXZ.dat
+
+numerics:
+    init_tree: 0
+    U1_symmetry: 5/2
+    opt_structure:
+        type: 1
+    initial_bond_dimension: 4
+    max_bond_dimensions: [60, 80]
+    max_num_sweeps: [20, 10]
+    energy_convergence_threshold: 1e-11
+    entanglement_convergence_threshold: 1e-10
+    energy_degeneracy_threshold: 1e-13
+    entanglement_degeneracy_threshold: 1e-8
+
+output:
+    dir: data
+    single_site: 1
+    two_site: 1
