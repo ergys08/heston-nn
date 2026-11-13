@@ -33,12 +33,6 @@
       "min": 0.00026532475019813706,
       "max": 0.006696841390573027
     },
-    "shared_chain": {
-      "mean": 0.0065689601208043,
-      "median": 0.00650823425803726,
-      "min": 0.0029590336721807553,
-      "max": 0.01496315435925688
-    },
     "tree_better_than_chain_count": 0
   },
   "chi4": {
@@ -66,12 +60,6 @@
       "min": 5.440092820663267e-15,
       "max": 4.115068297227964e-8
     },
-    "shared_chain": {
-      "mean": 0.0000018269086636149013,
-      "median": 7.603870524341971e-7,
-      "min": 5.087487986443762e-9,
-      "max": 0.00004541808213476273
-    },
     "tree_better_than_chain_count": 250
   },
   "best_shared": [
@@ -79,34 +67,12 @@
       "chi": 2,
       "tree": "(q1,(q2,(q3,(q4,(q5,(q6,(q7,q8)))))))",
       "tree_objective": 0.0024320229725114315,
-      "chain_order": [
-        8,
-        1,
-        7,
-        6,
-        5,
-        4,
-        3,
-        2
-      ],
-      "chain_objective": 8.881784197001257e-18,
       "original_chain_objective": 0
     },
     {
       "chi": 4,
       "tree": "(q1,(((q2,q4),((q5,q8),(q6,q7))),q3))",
       "tree_objective": 3.4066503000751424e-9,
-      "chain_order": [
-        8,
-        7,
-        1,
-        6,
-        5,
-        4,
-        3,
-        2
-      ],
-      "chain_objective": 3.153033389935447e-17,
       "original_chain_objective": 0
     }
   ],
@@ -116,5 +82,42 @@
       "(q1,(q2,(q3,(q4,(q5,(q6,(q7,q8)))))))",
       250
     ]
+  ],
+  "chi4_unique_trees": 3,
+  "chi4_most_common_trees": [
+    [
+      "(q1,(((q2,q4),((q5,q8),(q6,q7))),q3))",
+      202
+    ],
+    [
+      "(q1,((q2,((q4,q5),((q6,q8),q7))),q3))",
+      43
+    ],
+    [
+      "(q1,(((q2,q4),(((q5,q8),q7),q6)),q3))",
+      5
+    ]
+  ],
+  "chi4_best_chain_order_counts": [
+    [
+      "8-7-6-5-4-3-2-1",
+      246
+    ],
+    [
+      "8-7-5-6-3-4-2-1",
+      2
+    ],
+    [
+      "8-7-6-4-5-3-2-1",
+      1
+    ],
+    [
+      "8-7-5-6-4-3-2-1",
+      1
+    ]
+  ],
+  "validation_notes": [
+    "Removed shared-chain metrics from initial export: they were invalid because complementary cut costs were not populated in the mean-cost array; per-state optimal tree, optimal chain, original chain, and shared-tree evaluations are unaffected.",
+    "Tree objectives use a surrogate and are not TTN fidelity measurements."
   ]
 }
