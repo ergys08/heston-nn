@@ -1,0 +1,45 @@
+{
+  "algorithm": "TTNOpt FactorizeTensor.run, opt_fidelity=True, opt_structure=1",
+  "meaning": "Locally optimised TTN geometry and TTN tensor amplitudes, not a global minimum or an optimal CNOT circuit",
+  "source": "heston/heston_params_2013.csv",
+  "n_target_states": 250,
+  "n_attempted": 500,
+  "n_successes": 500,
+  "bonds": [
+    2,
+    4
+  ],
+  "sweeps": 4,
+  "timestamp_utc": "2026-11-13T23:12:41.776985+00:00",
+  "ttnopt_version": "0.1.0",
+  "qubit_axes": "axis 0 (q1) is most significant bit; axis 7 (q8) is least significant bit",
+  "by_bond_dimension": {
+    "2": {
+      "n": 250,
+      "n_unique_topologies": 1,
+      "top_topologies": [
+        {
+          "signature": "1-2|1-2-3|1-2-3-4|1-2-3-4-5|1-2-3-4-5-6",
+          "count": 250
+        }
+      ],
+      "mean_fidelity": 0.9977809853312792,
+      "min_fidelity": 0.9936595649848461,
+      "mean_initial_fidelity": 0.6676148526242567
+    },
+    "4": {
+      "n": 250,
+      "n_unique_topologies": 1,
+      "top_topologies": [
+        {
+          "signature": "1-2|1-2-3|1-2-3-4|1-2-3-4-5|1-2-3-4-5-6",
+          "count": 250
+        }
+      ],
+      "mean_fidelity": 0.99999998809157,
+      "min_fidelity": 0.9999998935433558,
+      "mean_initial_fidelity": 0.9999695293417555
+    }
+  },
+  "failures": []
+}
