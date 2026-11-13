@@ -1,0 +1,120 @@
+{
+  "scope": "8-qubit Heston terminal log-return probability-amplitude targets",
+  "dates": [
+    "2013-01-02",
+    "2013-12-31"
+  ],
+  "n_states": 250,
+  "objective": "minimum sum of squared Schmidt discarded weights over all unique TTN edge bipartitions",
+  "optimality": "Global for additive Schmidt-error surrogate over 10,395 unrooted binary tree topologies, not actual TTN fidelity or lowest CNOT count",
+  "state_norm_max_error": 8.881784197001252e-16,
+  "chi2": {
+    "best_tree": {
+      "mean": 0.002432022972511431,
+      "median": 0.002621751331592259,
+      "min": 0.00026532475019813706,
+      "max": 0.006696841390573027
+    },
+    "best_chain": {
+      "mean": 0.0024320229725114397,
+      "median": 0.00262175133159237,
+      "min": 0.00026532475019813706,
+      "max": 0.006696841390573027
+    },
+    "original_chain": {
+      "mean": 0.0024320229725114397,
+      "median": 0.00262175133159237,
+      "min": 0.00026532475019813706,
+      "max": 0.006696841390573027
+    },
+    "shared_tree": {
+      "mean": 0.0024320229725114813,
+      "median": 0.00262175133159237,
+      "min": 0.00026532475019813706,
+      "max": 0.006696841390573027
+    },
+    "shared_chain": {
+      "mean": 0.0065689601208043,
+      "median": 0.00650823425803726,
+      "min": 0.0029590336721807553,
+      "max": 0.01496315435925688
+    },
+    "tree_better_than_chain_count": 0
+  },
+  "chi4": {
+    "best_tree": {
+      "mean": 2.2874857985577534e-9,
+      "median": 9.831992997533234e-10,
+      "min": 6.328271240363392e-15,
+      "max": 3.9444679078570744e-8
+    },
+    "best_chain": {
+      "mean": 1.2102334401298265e-8,
+      "median": 8.146319396828972e-9,
+      "min": 7.587042105683395e-12,
+      "max": 1.0787227999742299e-7
+    },
+    "original_chain": {
+      "mean": 1.210620087777059e-8,
+      "median": 8.146319396828972e-9,
+      "min": 7.587042105683395e-12,
+      "max": 1.0787227999742299e-7
+    },
+    "shared_tree": {
+      "mean": 3.4066503507013124e-9,
+      "median": 1.0079169721066705e-9,
+      "min": 5.440092820663267e-15,
+      "max": 4.115068297227964e-8
+    },
+    "shared_chain": {
+      "mean": 0.0000018269086636149013,
+      "median": 7.603870524341971e-7,
+      "min": 5.087487986443762e-9,
+      "max": 0.00004541808213476273
+    },
+    "tree_better_than_chain_count": 250
+  },
+  "best_shared": [
+    {
+      "chi": 2,
+      "tree": "(q1,(q2,(q3,(q4,(q5,(q6,(q7,q8)))))))",
+      "tree_objective": 0.0024320229725114315,
+      "chain_order": [
+        8,
+        1,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2
+      ],
+      "chain_objective": 8.881784197001257e-18,
+      "original_chain_objective": 0
+    },
+    {
+      "chi": 4,
+      "tree": "(q1,(((q2,q4),((q5,q8),(q6,q7))),q3))",
+      "tree_objective": 3.4066503000751424e-9,
+      "chain_order": [
+        8,
+        7,
+        1,
+        6,
+        5,
+        4,
+        3,
+        2
+      ],
+      "chain_objective": 3.153033389935447e-17,
+      "original_chain_objective": 0
+    }
+  ],
+  "chi2_unique_trees": 1,
+  "chi2_most_common_trees": [
+    [
+      "(q1,(q2,(q3,(q4,(q5,(q6,(q7,q8)))))))",
+      250
+    ]
+  ]
+}
