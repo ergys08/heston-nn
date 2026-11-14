@@ -1,0 +1,29 @@
+{
+  "n_states": 250,
+  "n_transitions": 249,
+  "from": "2013-01-02",
+  "through": "2013-12-31",
+  "method": "fixed Hamiltonian, one scalar fitted per transition",
+  "initial_state_mode": "exact previous historical Heston state",
+  "order": 1,
+  "steps": 1,
+  "gate_counts": {
+    "cx": 18,
+    "rx": 18,
+    "ry": 9,
+    "rz": 9
+  },
+  "tau_range": [
+    -2.0,
+    2.0
+  ],
+  "mean_transport_fidelity": 0.9935682856479692,
+  "median_transport_fidelity": 0.9976300840038657,
+  "minimum_transport_fidelity": 0.9325761466230571,
+  "minimum_fidelity_date": "2013-07-26",
+  "mean_identity_fidelity": 0.9903351354675631,
+  "mean_gain_over_identity": 0.0032331501804060705,
+  "n_fidelity_ge_0_99": 190,
+  "n_fidelity_ge_0_999": 88,
+  "warning": "Scalar fits use next exact target; Hamiltonian and gate topology are fixed."
+}
