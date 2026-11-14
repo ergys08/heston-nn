@@ -1,0 +1,189 @@
+{
+  "dates": [
+    "2013-01-02",
+    "2013-01-03",
+    "2013-01-04",
+    "2013-01-07",
+    "2013-01-08"
+  ],
+  "n_states": 5,
+  "n_transitions": 4,
+  "n_all_pauli_candidates": 120,
+  "n_chain_candidates": 36,
+  "n_selected_operators": 12,
+  "selection_method": "greedy joint orthogonal matching pursuit",
+  "frozen_coefficient_fit": "2013-01-07 -> 2013-01-08",
+  "support": [
+    "Y4",
+    "Y5Z4",
+    "Y5X6",
+    "Y4Z3",
+    "Y6X5",
+    "Y6Z5",
+    "Y5X4",
+    "Y3",
+    "Y3Z2",
+    "Y4Z5",
+    "Y6",
+    "Y6Z7"
+  ],
+  "coefficients": {
+    "Y4": 0.23147073037422236,
+    "Y5Z4": -0.11208196992018374,
+    "Y5X6": 0.10610770770263953,
+    "Y4Z3": -0.05281442970988728,
+    "Y6X5": 0.16247326264992884,
+    "Y6Z5": -0.04154686721489472,
+    "Y5X4": -0.0401850463010262,
+    "Y3": 0.0343469511571589,
+    "Y3Z2": -0.01950319948316771,
+    "Y4Z5": 0.02635810376255996,
+    "Y6": -0.11379959312336384,
+    "Y6Z7": -0.02059314447927163
+  },
+  "frozen_training_relative_tangent_error": 0.34663674216857615,
+  "frozen_training_transport_fidelity": 0.9880941071680329,
+  "joint_support_mean_transport_fidelity": 0.9958276836952876,
+  "training_results": [
+    {
+      "from_date": "2013-01-02",
+      "to_date": "2013-01-03",
+      "identity_fidelity": 0.9890998043405584,
+      "relative_tangent_error": 0.3100756429166512,
+      "transport_fidelity": 0.9988617496144624,
+      "Y4": 0.0579026643591023,
+      "Y5Z4": -0.0498975607199003,
+      "Y5X6": 0.0010592068849803662,
+      "Y4Z3": -0.026426558327091856,
+      "Y6X5": 0.07273720122953664,
+      "Y6Z5": -0.02870569593253278,
+      "Y5X4": 0.009996536866536674,
+      "Y3": 0.03870568873599695,
+      "Y3Z2": -0.035190551291850336,
+      "Y4Z5": 0.027370865923956808,
+      "Y6": -0.05729981856714404,
+      "Y6Z7": -0.0018157455941872343
+    },
+    {
+      "from_date": "2013-01-03",
+      "to_date": "2013-01-04",
+      "identity_fidelity": 0.9999336425984269,
+      "relative_tangent_error": 0.3410138520658138,
+      "transport_fidelity": 0.9999923129257284,
+      "Y4": 0.00513717383034319,
+      "Y5Z4": -0.002528205557150445,
+      "Y5X6": 0.0012177753569892972,
+      "Y4Z3": 2.9012413440521493e-05,
+      "Y6X5": 0.0055962033001224504,
+      "Y6Z5": -0.0032491996070971264,
+      "Y5X4": -0.00019576889525182382,
+      "Y3": 0.001285801242201412,
+      "Y3Z2": -0.00045856316806359445,
+      "Y4Z5": 0.0013078181516736234,
+      "Y6": -0.0046118791594489585,
+      "Y6Z7": 0.00015855037267065785
+    },
+    {
+      "from_date": "2013-01-04",
+      "to_date": "2013-01-07",
+      "identity_fidelity": 0.9829410242986113,
+      "relative_tangent_error": 0.46222804626849434,
+      "transport_fidelity": 0.9963625650729265,
+      "Y4": -0.0272097237384899,
+      "Y5Z4": 0.02238307165844466,
+      "Y5X6": 0.009541253449952394,
+      "Y4Z3": -0.07285318300395253,
+      "Y6X5": -0.05396704729216933,
+      "Y6Z5": 0.01577303204298359,
+      "Y5X4": 0.03383512984409959,
+      "Y3": 0.03232424595753343,
+      "Y3Z2": -0.03743108863580612,
+      "Y4Z5": -0.010837113612513686,
+      "Y6": 0.03498618138206852,
+      "Y6Z7": 0.010833240005658173
+    },
+    {
+      "from_date": "2013-01-07",
+      "to_date": "2013-01-08",
+      "identity_fidelity": 0.9136004898475811,
+      "relative_tangent_error": 0.34663674216857615,
+      "transport_fidelity": 0.9880941071680329,
+      "Y4": 0.23147073037422236,
+      "Y5Z4": -0.11208196992018374,
+      "Y5X6": 0.10610770770263953,
+      "Y4Z3": -0.05281442970988728,
+      "Y6X5": 0.16247326264992884,
+      "Y6Z5": -0.04154686721489472,
+      "Y5X4": -0.0401850463010262,
+      "Y3": 0.0343469511571589,
+      "Y3Z2": -0.01950319948316771,
+      "Y4Z5": 0.02635810376255996,
+      "Y6": -0.11379959312336384,
+      "Y6Z7": -0.02059314447927163
+    }
+  ],
+  "selection_history": [
+    {
+      "n_terms": 1,
+      "selected_index": 3,
+      "mean_relative_tangent_error": 0.8223285261999113
+    },
+    {
+      "n_terms": 2,
+      "selected_index": 83,
+      "mean_relative_tangent_error": 0.7318585677490367
+    },
+    {
+      "n_terms": 3,
+      "selected_index": 96,
+      "mean_relative_tangent_error": 0.7078949529522462
+    },
+    {
+      "n_terms": 4,
+      "selected_index": 63,
+      "mean_relative_tangent_error": 0.650666463404867
+    },
+    {
+      "n_terms": 5,
+      "selected_index": 98,
+      "mean_relative_tangent_error": 0.6176739971569007
+    },
+    {
+      "n_terms": 6,
+      "selected_index": 99,
+      "mean_relative_tangent_error": 0.5411066783281875
+    },
+    {
+      "n_terms": 7,
+      "selected_index": 82,
+      "mean_relative_tangent_error": 0.5178945857541378
+    },
+    {
+      "n_terms": 8,
+      "selected_index": 2,
+      "mean_relative_tangent_error": 0.49316712787316475
+    },
+    {
+      "n_terms": 9,
+      "selected_index": 39,
+      "mean_relative_tangent_error": 0.4500637411913178
+    },
+    {
+      "n_terms": 10,
+      "selected_index": 81,
+      "mean_relative_tangent_error": 0.42399352807516233
+    },
+    {
+      "n_terms": 11,
+      "selected_index": 5,
+      "mean_relative_tangent_error": 0.36875045844121923
+    },
+    {
+      "n_terms": 12,
+      "selected_index": 109,
+      "mean_relative_tangent_error": 0.3649885708548839
+    }
+  ],
+  "convention": "H0=sum c_k P_k; U(tau)=exp(-i tau H0); q1 is MSB",
+  "warning": "In-sample exploratory model; no future dates used."
+}
