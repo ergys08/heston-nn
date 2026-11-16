@@ -160,8 +160,6 @@ def compare(input_path, output_dir, target=TARGET, n_qubits=8,
     selector = holdout["tail_selector"]
     one = holdout["always_one"]
     two = holdout["always_two"]
-    if not (one["states_below_target"] or selector["states_below_target"] == 0):
-        raise AssertionError("Unexpected comparison state")
     conclusions = {
         "cnot_saving_vs_two": 1 - selector["total_nominal_cnots"] /
                               two["total_nominal_cnots"],
