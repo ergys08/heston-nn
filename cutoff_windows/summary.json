@@ -8,6 +8,7 @@
     -0.5568025460234818,
     0.5568025460234818
   ],
+  "standardized_z_radius": 4.130140349129581,
   "retained_fraction": 0.999,
   "n_qubits": 8,
   "fidelity_thresholds": [
@@ -20,40 +21,223 @@
   "fft_halfwidth": 25.0,
   "maturity": 1.0,
   "drift": 0.05,
-  "tail_mass_median": 0.0012354668289417114,
-  "tail_mass_range": [
-    0.00037656247649708874,
-    0.043018545770448724
-  ],
   "key_correlations": [
     {
-      "predictor": "tail_mass_fixed",
-      "outcome": "fixed_max_discarded_chi2",
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_max_discarded_chi2",
       "n": 505,
-      "pearson_r": -0.8883403122507285,
-      "spearman_rho": -0.6273317083261123
+      "pearson_r": -0.9612759569529066,
+      "spearman_rho": -0.9642854347546557
     },
     {
-      "predictor": "tail_mass_fixed",
-      "outcome": "fixed_mps_layer_1_fidelity",
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_mps_layer_1_fidelity",
       "n": 505,
-      "pearson_r": 0.8943010727231482,
-      "spearman_rho": 0.6295359039009492
+      "pearson_r": 0.917443685275768,
+      "spearman_rho": 0.9220751267673354
     },
     {
-      "predictor": "tail_mass_fixed",
-      "outcome": "fixed_chi_for_995",
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_chi_for_995",
       "n": 505,
-      "pearson_r": -0.4323788587029032,
-      "spearman_rho": -0.17661311032337224
+      "pearson_r": null,
+      "spearman_rho": null
     },
     {
-      "predictor": "tail_mass_fixed",
-      "outcome": "adaptive_chi_for_995",
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_layers_for_999",
       "n": 505,
-      "pearson_r": -0.623815284714299,
-      "spearman_rho": -0.614786403108061
+      "pearson_r": -0.07715054908882933,
+      "spearman_rho": -0.07333242890562078
+    },
+    {
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_max_discarded_chi2",
+      "n": 505,
+      "pearson_r": -0.9785766297217184,
+      "spearman_rho": -0.9856161703126837
+    },
+    {
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_mps_layer_1_fidelity",
+      "n": 505,
+      "pearson_r": 0.9464460466198105,
+      "spearman_rho": 0.96147866339429
+    },
+    {
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_chi_for_995",
+      "n": 505,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "all",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_layers_for_999",
+      "n": 505,
+      "pearson_r": -0.07579341558010362,
+      "spearman_rho": -0.07394353247983428
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_max_discarded_chi2",
+      "n": 252,
+      "pearson_r": -0.9800053851239988,
+      "spearman_rho": -0.9856279755812063
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_mps_layer_1_fidelity",
+      "n": 252,
+      "pearson_r": 0.9489351631721152,
+      "spearman_rho": 0.956512740680418
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_chi_for_995",
+      "n": 252,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_layers_for_999",
+      "n": 252,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_max_discarded_chi2",
+      "n": 252,
+      "pearson_r": -0.9660515185760465,
+      "spearman_rho": -0.976939222218973
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_mps_layer_1_fidelity",
+      "n": 252,
+      "pearson_r": 0.9555326079369273,
+      "spearman_rho": 0.9677458057849535
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_chi_for_995",
+      "n": 252,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2019",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_layers_for_999",
+      "n": 252,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_max_discarded_chi2",
+      "n": 253,
+      "pearson_r": -0.9285231052505603,
+      "spearman_rho": -0.9406358790131472
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_mps_layer_1_fidelity",
+      "n": 253,
+      "pearson_r": 0.8185984720514871,
+      "spearman_rho": 0.8160632588910577
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_chi_for_995",
+      "n": 253,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "excess_kurtosis",
+      "outcome": "standardized_layers_for_999",
+      "n": 253,
+      "pearson_r": -0.07148341495327568,
+      "spearman_rho": -0.09832819688601536
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_max_discarded_chi2",
+      "n": 253,
+      "pearson_r": -0.9499857204993314,
+      "spearman_rho": -0.9593850175842644
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_mps_layer_1_fidelity",
+      "n": 253,
+      "pearson_r": 0.8540858428014675,
+      "spearman_rho": 0.8472384627810852
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_chi_for_995",
+      "n": 253,
+      "pearson_r": null,
+      "spearman_rho": null
+    },
+    {
+      "sample": "2020",
+      "analysis": "levels",
+      "predictor": "standardized_tail_mass_3sigma",
+      "outcome": "standardized_layers_for_999",
+      "n": 253,
+      "pearson_r": -0.07273444626938015,
+      "spearman_rho": -0.10005325297173494
     }
   ],
-  "caveat": "Comparisons describe correlations, not causality; fixed and adaptive quantum states use different bins."
+  "caveat": "Kurtosis and standardized tails measure shape. Correlations are observational, serially dependent; standardized encoding changes the physical bins."
 }
