@@ -261,9 +261,12 @@ def run(args):
 # The sweep uses already-computed iterative-MPS fidelities; no new state
 # simulation or optimisation is necessary when --analyse-existing is supplied.
 DEFAULT_SWEEP_THRESHOLDS = (
-    0.99820, 0.99825, 0.99830, 0.99835, 0.99840, 0.99845,
-    0.99850, 0.99860, 0.99870, 0.99880, 0.99890, 0.99900
+    0.99820, 0.99825, 0.99830, 0.99835, 0.99838, 0.99840,
+    0.99841, 0.99842, 0.99843, 0.99844, 0.99845, 0.99846,
+    0.99847, 0.99848, 0.99850, 0.99860, 0.99870, 0.99880,
+    0.99890, 0.99900
 )
+DEFAULT_REPRESENTATIVE_TARGET = 0.99842
 
 
 def auc_rank(values, labels):
@@ -365,9 +368,9 @@ def save_threshold_sweep(output_dir, rows, scan):
         "note": "If F_2 falls below the target, two layers are not sufficient.",
         "method": "ROC AUC plus a training-only (2019) conservative cutoff "
                   "tested out of year on 2020. Repeated daily dates are dependent.",
-        "representative_fidelity": 0.99835,
+        "representative_fidelity": DEFAULT_REPRESENTATIVE_TARGET,
         "representative_results": [r for r in results
-                                  if abs(r["target_fidelity"] - 0.99835) < 1e-10],
+                                  if abs(r["target_fidelity"] - DEFAULT_REPRESENTATIVE_TARGET) < 1e-10],
     }
     summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False)+"\n",
                             encoding="utf-8")
