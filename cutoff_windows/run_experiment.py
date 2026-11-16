@@ -257,6 +257,138 @@ def run(args):
     return summary
 
 
+
+# The sweep uses already-computed iterative-MPS fidelities; no new state
+# simulation or optimisation is necessary when --analyse-existing is supplied.
+DEFAULT_SWEEP_THRESHOLDS = (
+    0.99820, 0.99825, 0.99830, 0.99835, 0.99840, 0.99845,
+    0.99850, 0.99860, 0.99870, 0.99880, 0.99890, 0.99900
+)
+
+
+def auc_rank(values, labels):
+    """ROC AUC for predicting one-layer sufficiency from a scalar feature."""
+    from scipy.stats import rankdata
+
+    positive = np.asarray(labels, dtype=bool)
+    count_positive = int(positive.sum())
+    count_negative = len(positive) - count_positive
+    if not count_positive or not count_negative:
+        return None
+    ranks = rankdata(np.asarray(values, dtype=float), method="average")
+    total_positive_ranks = float(ranks[positive].sum())
+    return float((total_positive_ranks - count_positive * (count_positive + 1) / 2)
+                 / (count_positive * count_negative))
+
+
+def heldout_counts(records, threshold, feature, cutoff):
+    """Predict one layer only for feature > cutoff; otherwise use two."""
+    tp = tn = fp = fn = 0
+    for r in records:
+        actual = float(r["standardized_mps_layer_1_fidelity"]) >= threshold
+        predicted = float(r[feature]) > cutoff
+        if actual and predicted:
+            tp += 1
+        elif actual and not predicted:
+            fn += 1
+        elif not actual and predicted:
+            fp += 1  # unsafe: recommends an insufficient layer count
+        else:
+            tn += 1
+    n = len(records)
+    return dict(correct=tp+tn, accuracy=(tp+tn)/n if n else None,
+                true_one_layer=tp, true_two_layer=tn,
+                unnecessary_two_layers=fn, unsafe_one_layer=fp,
+                one_layer_selected=tp+fp,
+                always_two_accuracy=(tn+fp)/n if n else None)
+
+
+def sweep_thresholds(rows, thresholds):
+    """Classification diagnostics, preserving chronological year holdout."""
+    predictors = ("standardized_tail_mass_3sigma", "excess_kurtosis")
+    train = [r for r in rows if str(r["date"]).startswith("2019")]
+    test = [r for r in rows if str(r["date"]).startswith("2020")]
+    outputs = []
+    for t in thresholds:
+        for predictor in predictors:
+            for period, sample in (("all", rows), ("2019", train), ("2020", test)):
+                labels = [float(r["standardized_mps_layer_1_fidelity"]) >= t
+                          for r in sample]
+                n_one = sum(labels)
+                two_sufficient = sum(float(r["standardized_mps_layer_2_fidelity"]) >= t
+                                     for r in sample)
+                outputs.append(dict(
+                    target_fidelity=t, predictor=predictor, sample=period,
+                    n_states=len(sample), n_one_layer_sufficient=n_one,
+                    n_two_layers_needed=len(sample)-n_one,
+                    n_two_layers_sufficient=two_sufficient,
+                    auc_predict_one_layer=auc_rank(
+                        [float(r[predictor]) for r in sample], labels),
+                    rule_train_year="2019",
+                    rule_feature_cutoff=None,
+                    test_accuracy=None,
+                    test_unsafe_one_layer=None,
+                    test_unnecessary_two_layers=None,
+                    test_one_layer_selected=None,
+                    test_always_two_accuracy=None
+                ))
+            if train and test:
+                # Conservative, training-only threshold: choose one layer only
+                # if the observed feature exceeds ALL known 2019 failures.
+                failures = [float(r[predictor]) for r in train
+                            if float(r["standardized_mps_layer_1_fidelity"]) < t]
+                if failures:
+                    cutoff = max(failures)
+                    result = heldout_counts(test, t, predictor, cutoff)
+                    for entry in outputs[-3:]:
+                        entry["rule_feature_cutoff"] = cutoff
+                        entry["test_accuracy"] = result["accuracy"]
+                        entry["test_unsafe_one_layer"] = result["unsafe_one_layer"]
+                        entry["test_unnecessary_two_layers"] = result["unnecessary_two_layers"]
+                        entry["test_one_layer_selected"] = result["one_layer_selected"]
+                        entry["test_always_two_accuracy"] = result["always_two_accuracy"]
+    return outputs
+
+
+def save_threshold_sweep(output_dir, rows, scan):
+    results = sweep_thresholds(rows, scan)
+    write(output_dir / "threshold_sweep.csv", results)
+    summary_path = output_dir / "summary.json"
+    if summary_path.exists():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    else:
+        summary = {}
+    summary["one_vs_two_layer_threshold_sweep"] = {
+        "tested_fidelities": list(scan),
+        "encoding": "standardized",
+        "classification_label": "one layer if F_1 >= target; otherwise two",
+        "note": "If F_2 falls below the target, two layers are not sufficient.",
+        "method": "ROC AUC plus a training-only (2019) conservative cutoff "
+                  "tested out of year on 2020. Repeated daily dates are dependent.",
+        "representative_fidelity": 0.99835,
+        "representative_results": [r for r in results
+                                  if abs(r["target_fidelity"] - 0.99835) < 1e-10],
+    }
+    summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False)+"\n",
+                            encoding="utf-8")
+    print(f"Updated {output_dir / 'threshold_sweep.csv'} and summary.json")
+    return results
+
+
+def analyse_existing(args):
+    csv_path = args.output_dir / "daily_results.csv"
+    if not csv_path.is_file():
+        raise FileNotFoundError(f"Existing daily results not found: {csv_path}")
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    required = ("date", "excess_kurtosis", "standardized_tail_mass_3sigma",
+                "standardized_mps_layer_1_fidelity", "standardized_mps_layer_2_fidelity")
+    missing = [key for key in required if not rows or key not in rows[0]]
+    if missing:
+        raise ValueError(f"Existing daily_results.csv lacks: {missing}")
+    return save_threshold_sweep(args.output_dir, rows, args.sweep_thresholds)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--input",type=Path,default=DEFAULT_INPUT)
@@ -271,6 +403,18 @@ def main():
     p.add_argument("--layers",type=int,default=3)
     p.add_argument("--max-states",type=int)
     p.add_argument("--fail-fast",action="store_true")
-    return run(p.parse_args())
+    p.add_argument("--sweep-thresholds",type=float,nargs="+",
+                   default=list(DEFAULT_SWEEP_THRESHOLDS),
+                   help="Fidelity targets for one-vs-two-layer classification")
+    p.add_argument("--analyse-existing",action="store_true",
+                   help="Rescore committed daily MPS fidelities without recomputing Heston states")
+    args=p.parse_args()
+    if args.analyse_existing:
+        return analyse_existing(args)
+    summary=run(args)
+    with (args.output_dir/"daily_results.csv").open(newline="",encoding="utf-8") as f:
+        rows=list(csv.DictReader(f))
+    save_threshold_sweep(args.output_dir,rows,args.sweep_thresholds)
+    return summary
 
 if __name__=="__main__":main()
