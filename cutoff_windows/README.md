@@ -58,3 +58,22 @@ Excess kurtosis is not the only definition of heavy tails: it is sensitive to th
 All the state targets are conditional on the chosen encoding window. When the standardised window retains different fractions across dates, preparation fidelity refers to the **conditional quantum state**, not the full real-line density. A distribution's standardisation does not guarantee identical MPS difficulty. Successive market calibrations are highly autocorrelated, so naive significance tests or a pooled correlation should not be interpreted as independent evidence or causation. Comparing 2019 and 2020 separately, and using first differences, is more informative.
 
 To change fidelity: `--fidelities 0.99 0.995 0.999`; qubits: `--qubits 10`; iterative layers: `--layers 4`; first-date retained probability: `--retained-fraction 0.9999`.
+
+## Selecting one versus two MPS layers: fidelity sweep
+
+The original fidelity targets (`0.995` and `0.999`) rarely distinguish one from two MPS layers. The new **one-versus-two classifier** checks thresholds spanning `0.99820` through `0.99900`, without requiring new circuit optimization.
+
+**Fast mode — recompute only classification from already saved daily fidelities:**
+
+```bash
+git pull origin main
+python -m cutoff_windows.run_experiment --analyse-existing
+```
+
+This overwrites `cutoff_windows/summary.json` and writes `cutoff_windows/threshold_sweep.csv`. It leaves the original daily results and plots intact. A full rerun using `python -m cutoff_windows.run_experiment` also produces this new sweep. The scan does **not** change the existing `--fidelities` MPS decomposition targets; it reuses the already recorded one- and two-layer fidelities for finer thresholds.
+
+Each threshold reports: (i) how many of the 505 standardised states satisfy `F_1 >= F_target`, (ii) whether two layers reach the target, (iii) ROC AUCs for kurtosis and three-sigma tail mass over all dates and separately within 2019/2020, and (iv) a conservative rule fitted **only on 2019**, evaluated on unseen **2020** dates. The cutoff rule chooses one layer only when the tail-shape predictor exceeds the largest 2019 predictor value for a state requiring two layers. It therefore makes no *training* false-positive one-layer recommendations by construction, but 2020 holdout violations remain possible and are explicitly counted.
+
+For a useful balanced benchmark, try `F_target=0.99835`: 355 one-layer versus 150 two-layer cases. This is **conditional preparation fidelity on the standardised truncated state**; if you need end-to-end fidelity against the full distribution, account separately for retained mass.
+
+The sweep output is descriptive, not a proof that a single scalar generalises to different Heston regimes or other models. The 2019 versus 2020 split is one chronological holdout and the daily calibrations are dependent.
