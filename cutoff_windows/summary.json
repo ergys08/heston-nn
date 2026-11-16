@@ -18,8 +18,8 @@
   ],
   "n_layers": 3,
   "n_fft": 131072,
-  "fft_halfwidth": 25.0,
-  "maturity": 1.0,
+  "fft_halfwidth": 25,
+  "maturity": 1,
   "drift": 0.05,
   "key_correlations": [
     {
@@ -239,5 +239,40 @@
       "spearman_rho": -0.10005325297173494
     }
   ],
-  "caveat": "Kurtosis and standardized tails measure shape. Correlations are observational, serially dependent; standardized encoding changes the physical bins."
+  "caveat": "Kurtosis and standardized tails measure shape. Correlations are observational, serially dependent; standardized encoding changes the physical bins.",
+  "one_vs_two_layer_threshold_sweep": {
+    "tested_fidelities": [
+      0.9982,
+      0.99825,
+      0.9983,
+      0.99835,
+      0.9984,
+      0.99845,
+      0.9985,
+      0.9986,
+      0.9987,
+      0.9988,
+      0.9989,
+      0.999
+    ],
+    "file": "cutoff_windows/threshold_sweep.csv",
+    "source": "existing 505 states' actual recorded 1- and 2-layer MPS fidelities; no new circuit fits",
+    "selected_threshold": 0.99835,
+    "selected_threshold_counts": {
+      "one_layer_sufficient": 355,
+      "two_layers_required": 150,
+      "all_satisfied_by_two": true
+    },
+    "feature": "standardized_tail_mass_3sigma",
+    "auc_all": 0.9906854460093897,
+    "conservative_cutoff_trained_2019": 0.00798601509375918,
+    "heldout_2020": {
+      "n": 253,
+      "one_layer_selected": 229,
+      "unsafe_one_layer": 0,
+      "unnecessary_two_layers": 15,
+      "accuracy": 0.9407114624505929
+    },
+    "interpretation": "The new threshold separates layer counts while 0.999 rarely does. Holdout result is conditional on historical Heston family and chosen window, not a formal guarantee."
+  }
 }
