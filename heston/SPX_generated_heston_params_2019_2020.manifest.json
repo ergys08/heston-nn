@@ -1,0 +1,41 @@
+{
+  "instrument": "S&P 500 price index (SPX / ^GSPC)",
+  "source": {
+    "provider": "yfinance",
+    "source": "Yahoo Finance ^GSPC",
+    "sha256": "92c0fa602c24dc72f5ca0fa36d8ff7af48a0c14f23aa015854026e38e6ed2ce4"
+  },
+  "source_first_date": "2016-01-04",
+  "source_last_date": "2020-12-31",
+  "model": "Heston under P, approximate Euler latent-variance grid likelihood; NOT option-implied Q",
+  "requested_range": [
+    "2019-01-02",
+    "2020-12-31"
+  ],
+  "n_rows": 505,
+  "lookback": 504,
+  "refit_every": 1,
+  "mu": 0.05,
+  "grid": 64,
+  "max_variance": 1.0,
+  "bounds": {
+    "kappa": [
+      0.12,
+      20.0
+    ],
+    "theta": [
+      0.001,
+      0.4
+    ],
+    "sigma": [
+      0.025,
+      2.5
+    ],
+    "rho": [
+      -0.97,
+      0.97
+    ]
+  },
+  "n_rows_flagged": 0,
+  "n_refits": 505
+}
