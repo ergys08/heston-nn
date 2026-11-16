@@ -77,3 +77,26 @@ Each threshold reports: (i) how many of the 505 standardised states satisfy `F_1
 For a useful balanced benchmark, try `F_target=0.99835`: 355 one-layer versus 150 two-layer cases. This is **conditional preparation fidelity on the standardised truncated state**; if you need end-to-end fidelity against the full distribution, account separately for retained mass.
 
 The sweep output is descriptive, not a proof that a single scalar generalises to different Heston regimes or other models. The 2019 versus 2020 split is one chronological holdout and the daily calibrations are dependent.
+
+## Workflow-level cost–fidelity comparison
+
+The script `cutoff_windows/compare_workflows.py` directly compares **three preparation policies** using the already saved one- and two-layer conditional MPS fidelities:
+
+1. Always use one MPS layer.
+2. Always use two MPS layers.
+3. Select one or two layers using the three-sigma tail-weight cutoff learned from **2019 only**, with **2020 as an unseen holdout**.
+
+Run from the repository root after pulling the latest code:
+
+```bash
+git pull origin main
+python -m cutoff_windows.compare_workflows
+```
+
+Outputs, overwritten on each run, are `workflow_comparison_daily.csv` (every date and policy), `workflow_comparison_summary.csv` (aggregated measures for 2019, 2020 and full dataset), and `workflow_comparison_summary.json` (configuration, held-out comparisons, savings and caveats). No Heston refitting, state recalculation or MPS optimisation is needed.
+
+The default target is **0.99835 conditional-state fidelity** on the eight-qubit *standardised* window. Change it with `--target 0.9984`, or try a kurtosis predictor with `--feature excess_kurtosis`. Both predictors use the same conservative 2019-only training rule: use one layer only if the predictor exceeds the largest predictor measured among 2019 states that fail with one layer.
+
+One MPS layer has `N-1=7` native two-qubit blocks; two layers have 14. The script reports **nominal** CNOT counts, assuming two CNOTs per real two-qubit block (14 versus 28 CNOTs). This is a cost proxy derived from the existing MPS implementation, **not** a Qiskit transpilation measurement. Feature computation, classical optimisation and hardware runtime are not counted. Importantly, *always one layer has the lowest gate cost*, and *always two layers has the highest fidelity*: the selector's success criterion is meeting the **required fidelity at lower cost than always two layers**, rather than dominating both baselines on every metric.
+
+On the **2020 holdout** for `F>=0.99835`, the three-sigma selector uses one layer on 229/253 days, reaches the target on all 253, and uses 3,878 nominal CNOTs in total (15.328 per state). Always one layer uses 3,542 CNOTs but fails the conditional fidelity target on nine days. Always two layers uses 7,084 CNOTs and meets it on every day. Thus the selector saves approximately **45.3%** of the two-layer CNOT budget at the same target pass rate; the counts are conditional on this Heston panel and the standardised encoding convention.
