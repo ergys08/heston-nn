@@ -74,29 +74,38 @@ This overwrites `cutoff_windows/summary.json` and writes `cutoff_windows/thresho
 
 Each threshold reports: (i) how many of the 505 standardised states satisfy `F_1 >= F_target`, (ii) whether two layers reach the target, (iii) ROC AUCs for kurtosis and three-sigma tail mass over all dates and separately within 2019/2020, and (iv) a conservative rule fitted **only on 2019**, evaluated on unseen **2020** dates. The cutoff rule chooses one layer only when the tail-shape predictor exceeds the largest 2019 predictor value for a state requiring two layers. It therefore makes no *training* false-positive one-layer recommendations by construction, but 2020 holdout violations remain possible and are explicitly counted.
 
-For a useful balanced benchmark, try `F_target=0.99835`: 355 one-layer versus 150 two-layer cases. This is **conditional preparation fidelity on the standardised truncated state**; if you need end-to-end fidelity against the full distribution, account separately for retained mass.
+The default representative fidelity target is now **0.99842**, at which 16 of 253 held-out 2020 states require two layers (rather than nine at 0.99835). This leaves 16 positive one-layer examples in 2019. Thresholds approaching 0.99845 yield only two positive 2019 examples, and thresholds >= roughly 0.99848 lack any; these are unsuitable for calibrating this one-year selector. This is **conditional preparation fidelity on the standardised truncated state**; if you need end-to-end fidelity against the full distribution, account separately for retained mass.
 
 The sweep output is descriptive, not a proof that a single scalar generalises to different Heston regimes or other models. The 2019 versus 2020 split is one chronological holdout and the daily calibrations are dependent.
 
 ## Workflow-level cost–fidelity comparison
 
-The script `cutoff_windows/compare_workflows.py` directly compares **three preparation policies** using the already saved one- and two-layer conditional MPS fidelities:
+The script `cutoff_windows/compare_workflows.py` compares **four policies** using the *same previously saved* MPS fidelities:
 
 1. Always use one MPS layer.
 2. Always use two MPS layers.
-3. Select one or two layers using the three-sigma tail-weight cutoff learned from **2019 only**, with **2020 as an unseen holdout**.
+3. Three-sigma-tail-based selector, trained on 2019.
+4. Excess-kurtosis-based selector, independently trained on 2019.
 
-Run from the repository root after pulling the latest code:
+### Rerun both experiments and overwrite previous outputs
+
+From the repository root, run:
 
 ```bash
 git pull origin main
+python -m cutoff_windows.run_experiment --analyse-existing
 python -m cutoff_windows.compare_workflows
 ```
 
-Outputs, overwritten on each run, are `workflow_comparison_daily.csv` (every date and policy), `workflow_comparison_summary.csv` (aggregated measures for 2019, 2020 and full dataset), and `workflow_comparison_summary.json` (configuration, held-out comparisons, savings and caveats). No Heston refitting, state recalculation or MPS optimisation is needed.
+The first command re-evaluates both selectors' classification/ROC-AUC diagnostics on the extended fidelity sweep and **overwrites** `threshold_sweep.csv` and the existing selector-sweep section of `summary.json`. Its representative fidelity is now **0.99842**. The second evaluates all four workflows on the same stricter default target and **overwrites** the existing `workflow_comparison_daily.csv`, `workflow_comparison_summary.csv` and `workflow_comparison_summary.json` (no new output names). The source `daily_results.csv`, `correlations.csv` and plots remain untouched: no state-preparation simulation is required. Both selectors are fitted on 2019 only and tested on held-out 2020.
 
-The default target is **0.99835 conditional-state fidelity** on the eight-qubit *standardised* window. Change it with `--target 0.9984`, or try a kurtosis predictor with `--feature excess_kurtosis`. Both predictors use the same conservative 2019-only training rule: use one layer only if the predictor exceeds the largest predictor measured among 2019 states that fail with one layer.
+For a different threshold, use a matching pair of commands:
 
-One MPS layer has `N-1=7` native two-qubit blocks; two layers have 14. The script reports **nominal** CNOT counts, assuming two CNOTs per real two-qubit block (14 versus 28 CNOTs). This is a cost proxy derived from the existing MPS implementation, **not** a Qiskit transpilation measurement. Feature computation, classical optimisation and hardware runtime are not counted. Importantly, *always one layer has the lowest gate cost*, and *always two layers has the highest fidelity*: the selector's success criterion is meeting the **required fidelity at lower cost than always two layers**, rather than dominating both baselines on every metric.
+```bash
+python -m cutoff_windows.run_experiment --analyse-existing --sweep-thresholds 0.99845
+python -m cutoff_windows.compare_workflows --target 0.99845
+```
 
-On the **2020 holdout** for `F>=0.99835`, the three-sigma selector uses one layer on 229/253 days, reaches the target on all 253, and uses 3,878 nominal CNOTs in total (15.328 per state). Always one layer uses 3,542 CNOTs but fails the conditional fidelity target on nine days. Always two layers uses 7,084 CNOTs and meets it on every day. Thus the selector saves approximately **45.3%** of the two-layer CNOT budget at the same target pass rate; the counts are conditional on this Heston panel and the standardised encoding convention.
+At **0.99842**, 16 of the 253 2020 states require two MPS layers; 2019 still contains 16 one-layer-sufficient cases, allowing a nondegenerate training rule. At 0.99845, 19 2020 states need two layers but only **two** 2019 states are one-layer sufficient; the resulting selection rule has very limited training support. Beyond roughly 0.99848, 2019 contains no one-layer successes, so the comparison script refuses to train a meaningful 2019-only selector at those targets. The conservative rule selects one layer only when the feature value is above the largest value observed among *2019 one-layer failures*.
+
+Nominal CNOT counts use **two CNOTs per real two-qubit MPS block**: 14 for one 8-qubit MPS layer and 28 for two. These are nominal structural estimates, not actual Qiskit-transpiled costs. The experiment measures **conditional fidelity on the standardised truncated state** and excludes the classical cost of the predictor and neural-network inference. Fidelity-threshold exploration uses information from the 2020 data, so 2020 is a chronological holdout for the *fitted selector cutoffs*, but not a fully untouched dataset for threshold selection. Follow-up testing on another historical period or parameter panel is necessary for an unbiased performance estimate.
