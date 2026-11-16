@@ -1,0 +1,59 @@
+{
+  "source": "heston/SPX_generated_heston_params_2019_2020.csv",
+  "n_input": 505,
+  "n_success": 505,
+  "n_failed": 0,
+  "first_date": "2019-01-02",
+  "fixed_symmetric_cutoff": [
+    -0.5568025460234818,
+    0.5568025460234818
+  ],
+  "retained_fraction": 0.999,
+  "n_qubits": 8,
+  "fidelity_thresholds": [
+    0.99,
+    0.995,
+    0.999
+  ],
+  "n_layers": 3,
+  "n_fft": 131072,
+  "fft_halfwidth": 25.0,
+  "maturity": 1.0,
+  "drift": 0.05,
+  "tail_mass_median": 0.0012354668289417114,
+  "tail_mass_range": [
+    0.00037656247649708874,
+    0.043018545770448724
+  ],
+  "key_correlations": [
+    {
+      "predictor": "tail_mass_fixed",
+      "outcome": "fixed_max_discarded_chi2",
+      "n": 505,
+      "pearson_r": -0.8883403122507285,
+      "spearman_rho": -0.6273317083261123
+    },
+    {
+      "predictor": "tail_mass_fixed",
+      "outcome": "fixed_mps_layer_1_fidelity",
+      "n": 505,
+      "pearson_r": 0.8943010727231482,
+      "spearman_rho": 0.6295359039009492
+    },
+    {
+      "predictor": "tail_mass_fixed",
+      "outcome": "fixed_chi_for_995",
+      "n": 505,
+      "pearson_r": -0.4323788587029032,
+      "spearman_rho": -0.17661311032337224
+    },
+    {
+      "predictor": "tail_mass_fixed",
+      "outcome": "adaptive_chi_for_995",
+      "n": 505,
+      "pearson_r": -0.623815284714299,
+      "spearman_rho": -0.614786403108061
+    }
+  ],
+  "caveat": "Comparisons describe correlations, not causality; fixed and adaptive quantum states use different bins."
+}
