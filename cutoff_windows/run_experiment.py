@@ -1,4 +1,9 @@
-"""Fixed and adaptive cutoff windows versus MPS complexity, 2019–2020 SPX."""
+"""Tail shape (not merely volatility) versus Heston MPS complexity.
+
+Preserves the previous fixed and adaptive raw-return windows as controls.
+Primary analysis: amplitude encoding on a common window in STANDARD DEVIATIONS.
+Rerunning writes the same output filenames and replaces the previous results.
+"""
 from __future__ import annotations
 import argparse, csv, json, warnings
 from pathlib import Path
@@ -30,23 +35,67 @@ def radius(xx,cc,m):
         else:lo=mid
     return hi
 
+
+def full_moments(x,pdf):
+    """Moments of the complete PDF, not the truncated encoding."""
+    dx=float(x[1]-x[0])
+    mu=float(np.sum(x*pdf)*dx)
+    v=float(np.sum((x-mu)**2*pdf)*dx)
+    if v<=0 or not np.isfinite(v):raise ArithmeticError("Bad full-PDF variance")
+    sd=np.sqrt(v)
+    skew=float(np.sum((x-mu)**3*pdf)*dx/sd**3)
+    kurt=float(np.sum((x-mu)**4*pdf)*dx/sd**4-3)
+    return mu,sd,v,skew,kurt
+
+def tail_z(xx,cc,mu,sd,z):
+    lo,hi=mu-z*sd,mu+z*sd
+    if lo<=xx[0] or hi>=xx[-1]:raise ArithmeticError("FFT grid too narrow for z tails")
+    return float(1-(np.interp(hi,xx,cc)-np.interp(lo,xx,cc)))
+
+def z_radius(xx,cc,mu,sd,target):
+    if not 0<target<1:raise ValueError("Bad retained mass")
+    lo,hi=0.,min((mu-xx[0])/sd,(xx[-1]-mu)/sd)*(1-1e-7)
+    if hi<=0 or tail_z(xx,cc,mu,sd,hi)>1-target+1e-10:
+        raise ArithmeticError("FFT grid too narrow for standardised cutoff")
+    for _ in range(55):
+        middle=(lo+hi)/2
+        if tail_z(xx,cc,mu,sd,middle)>1-target:lo=middle
+        else:hi=middle
+    return hi
+
+def bin_probs(xx,cc,left,right,qubits):
+    if left<=xx[0] or right>=xx[-1] or left>=right:
+        raise ArithmeticError("Encoding window outside FFT grid")
+    edges=np.linspace(left,right,2**qubits+1)
+    masses=np.diff(np.interp(edges,xx,cc))
+    if masses.min()<-1e-12:raise ArithmeticError("Negative discretised mass")
+    masses=np.maximum(masses,0)
+    kept=float(masses.sum())
+    if not 0<kept<=1+1e-9:raise ArithmeticError("Bad retained probability")
+    return masses/kept,kept
+
 def diagnostics(probs,thresholds,layers):
-    psi=np.sqrt(probs);n=(len(psi)-1).bit_length()
-    ranks=[];drops=[];ents=[]
+    psi=np.sqrt(np.asarray(probs,float))
+    n=(len(psi)-1).bit_length()
+    ranks=[];drops=[];entropies=[]
     for b in range(1,n):
-        s=np.linalg.svd(psi.reshape(2**b,-1),compute_uv=False);w=s*s
-        ranks.append(int((s>1e-10*s[0]).sum()));drops.append(float(w[2:].sum()))
-        nz=w[w>1e-16];ents.append(float(-(nz*np.log2(nz)).sum()))
-    ff=[float(decompose_state(psi,max_bond=k).fidelity) for k in range(1,2**(n//2)+1)]
-    ll=[float(x) for x in prepare_iterative_mps(psi,n_layers=layers).fidelities]
+        singular=np.linalg.svd(psi.reshape(2**b,-1),compute_uv=False)
+        w=singular**2
+        ranks.append(int(np.sum(singular>singular[0]*1e-10)))
+        drops.append(float(w[2:].sum()))
+        positive=w[w>1e-16]
+        entropies.append(float(-(positive*np.log2(positive)).sum()))
+    chi=[float(decompose_state(psi,max_bond=k).fidelity)
+         for k in range(1,2**(n//2)+1)]
+    layer=[float(z) for z in prepare_iterative_mps(psi,n_layers=layers).fidelities]
     out=dict(max_exact_bond_dimension=max(ranks),bond_ranks_json=json.dumps(ranks),
-             max_discarded_chi2=max(drops),discarded_chi2_by_bond_json=json.dumps(drops),
-             max_bond_entropy_bits=max(ents),fidelity_by_chi_json=json.dumps(ff))
-    for j,f in enumerate(ll,1):out[f"mps_layer_{j}_fidelity"]=f
-    for threshold in thresholds:
-        tag=str(threshold).replace("0.","")
-        out[f"chi_for_{tag}"]=next((i for i,f in enumerate(ff,1) if f>=threshold-1e-12),None)
-        out[f"layers_for_{tag}"]=next((i for i,f in enumerate(ll,1) if f>=threshold-1e-12),None)
+        max_discarded_chi2=max(drops),discarded_chi2_by_bond_json=json.dumps(drops),
+        max_bond_entropy_bits=max(entropies),fidelity_by_chi_json=json.dumps(chi))
+    for i,f in enumerate(layer,1):out[f"mps_layer_{i}_fidelity"]=f
+    for t in thresholds:
+        tag=str(t).replace("0.","")
+        out[f"chi_for_{tag}"]=next((i for i,f in enumerate(chi,1) if f>=t-1e-12),None)
+        out[f"layers_for_{tag}"]=next((i for i,f in enumerate(layer,1) if f>=t-1e-12),None)
     return out
 
 def write(path,rows):
@@ -54,112 +103,159 @@ def write(path,rows):
         with path.open("w",newline="") as f:
             wr=csv.DictWriter(f,fieldnames=list(rows[0]));wr.writeheader();wr.writerows(rows)
 
+
 def calculate_corr(rows,thresholds,layers):
-    xs=["tail_mass_fixed","adaptive_radius","excess_kurtosis","variance","sigma","v0"]
-    ys=[]
-    for w in ("fixed","adaptive"):
-        ys += [f"{w}_max_exact_bond_dimension",f"{w}_max_discarded_chi2",f"{w}_max_bond_entropy_bits"]
-        ys += [f"{w}_mps_layer_{j}_fidelity" for j in range(1,layers+1)]
+    predictors=["excess_kurtosis","standardized_tail_mass_3sigma",
+                "standardized_tail_mass_4sigma","skewness",
+                "tail_mass_fixed","variance","sigma","v0"]
+    outcomes=[]
+    for mode in ("standardized","fixed","adaptive"):
+        outcomes += [f"{mode}_max_exact_bond_dimension",f"{mode}_max_discarded_chi2",
+                     f"{mode}_max_bond_entropy_bits"]
+        outcomes += [f"{mode}_mps_layer_{j}_fidelity" for j in range(1,layers+1)]
         for t in thresholds:
-            tag=str(t).replace("0.","");ys += [f"{w}_chi_for_{tag}",f"{w}_layers_for_{tag}"]
-    out=[]
-    for x in xs:
-        for y in ys:
-            xy=[]
-            for r in rows:
-                try:
-                    a,b=float(r[x]),float(r[y])
-                    if np.isfinite(a) and np.isfinite(b):xy.append((a,b))
-                except (ValueError,TypeError):pass
-            pr=sr=None
-            if len(xy)>=3:
-                a,b=np.array(xy).T
-                if np.std(a)>1e-13 and np.std(b)>1e-13:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        pr=float(pearsonr(a,b).statistic);sr=float(spearmanr(a,b).statistic)
-            out.append(dict(predictor=x,outcome=y,n=len(xy),pearson_r=pr,spearman_rho=sr))
-    return out
+            tag=str(t).replace("0.","")
+            outcomes += [f"{mode}_chi_for_{tag}",f"{mode}_layers_for_{tag}"]
+    groups={"all":rows}
+    groups.update({year:[r for r in rows if r["date"].startswith(year)]
+                   for year in sorted({r["date"][:4] for r in rows})})
+    result=[]
+    for group,subset in groups.items():
+        for analysis in ("levels","first_difference"):
+            pairs=([(r,r) for r in subset] if analysis=="levels" else
+                   [(subset[i-1],subset[i]) for i in range(1,len(subset))
+                    if subset[i-1]["date"][:4]==subset[i]["date"][:4]])
+            for predictor in predictors:
+                for outcome in outcomes:
+                    xy=[]
+                    for before,after in pairs:
+                        try:
+                            if analysis=="levels":
+                                x,y=float(after[predictor]),float(after[outcome])
+                            else:
+                                x=float(after[predictor])-float(before[predictor])
+                                y=float(after[outcome])-float(before[outcome])
+                            if np.isfinite(x) and np.isfinite(y):xy.append((x,y))
+                        except (ValueError,TypeError):pass
+                    pr=sr=None
+                    if len(xy)>=3:
+                        x,y=np.array(xy).T
+                        if np.std(x)>1e-13 and np.std(y)>1e-13:
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore")
+                                pr=float(pearsonr(x,y).statistic)
+                                sr=float(spearmanr(x,y).statistic)
+                    result.append(dict(sample=group,analysis=analysis,
+                                       predictor=predictor,outcome=outcome,n=len(xy),
+                                       pearson_r=pr,spearman_rho=sr))
+    return result
+
 
 def make_plots(rows,out):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    d=np.array([np.datetime64(r["date"]) for r in rows])
-    t=np.array([r["tail_mass_fixed"] for r in rows])
-    f,a=plt.subplots(3,1,figsize=(11,9),sharex=True,constrained_layout=True)
-    a[0].plot(d,t);a[0].set_ylabel("Mass outside fixed cutoff")
-    for w in ("fixed","adaptive"):
-        a[1].plot(d,[r[f"{w}_chi_for_995"] for r in rows],label=w)
-        a[2].plot(d,[r[f"{w}_mps_layer_1_fidelity"] for r in rows],label=w)
-    a[1].set_ylabel("Bond dimension for 0.995 fidelity");a[1].legend()
-    a[2].set_ylabel("One-layer MPS fidelity");a[2].legend()
-    f.savefig(out/"timeline.png",dpi=160);plt.close(f)
-    f,a=plt.subplots(1,2,figsize=(11,4),constrained_layout=True)
-    for ax,key in zip(a,("fixed_max_discarded_chi2","fixed_chi_for_995")):
-        ax.scatter(t,[r[key] for r in rows],s=10,alpha=.5)
-        ax.set_xlabel("Mass outside first-date cutoff");ax.set_ylabel(key)
-    f.savefig(out/"correlation.png",dpi=160);plt.close(f)
+    dates=np.array([np.datetime64(r["date"]) for r in rows])
+    kurt=np.array([r["excess_kurtosis"] for r in rows])
+    mass=np.array([r["standardized_tail_mass_3sigma"] for r in rows])
+    fig,ax=plt.subplots(3,1,figsize=(11,9),sharex=True,constrained_layout=True)
+    ax[0].plot(dates,kurt);ax[0].set_ylabel("Excess kurtosis (full PDF)")
+    ax[1].plot(dates,mass);ax[1].set_ylabel("P(|X-mu| > 3 std)")
+    for mode in ("standardized","fixed","adaptive"):
+        ax[2].plot(dates,[r[f"{mode}_mps_layer_1_fidelity"] for r in rows],label=mode)
+    ax[2].set_ylabel("One-layer MPS fidelity");ax[2].set_xlabel("Trading day")
+    ax[2].legend()
+    fig.savefig(out/"timeline.png",dpi=160);plt.close(fig)
+    fig,ax=plt.subplots(1,3,figsize=(14,4),constrained_layout=True)
+    for a,key in zip(ax,("standardized_max_discarded_chi2",
+                         "standardized_chi_for_995","standardized_mps_layer_1_fidelity")):
+        a.scatter(kurt,[r[key] for r in rows],s=10,alpha=.55)
+        a.set_xlabel("Full-PDF excess kurtosis");a.set_ylabel(key)
+    fig.savefig(out/"correlation.png",dpi=160);plt.close(fig)
+
 
 def run(args):
-    if not 2<=args.qubits<=12:raise ValueError("qubits must be between 2 and 12")
-    if args.layers<1:raise ValueError("layers must be positive")
-    if not args.fidelities or any(not 0<f<=1 for f in args.fidelities):raise ValueError("invalid fidelity thresholds")
+    if not 0<args.retained_fraction<1:raise ValueError("Bad retained fraction")
+    if not 2<=args.qubits<=12:raise ValueError("Qubits must be 2..12")
+    if args.layers<1 or any(not 0<t<=1 for t in args.fidelities):
+        raise ValueError("Bad layers or fidelities")
     samples=read_calibrations(args.input)
     if args.max_states:samples=samples[:args.max_states]
-    if not samples:raise ValueError("empty input")
+    if not samples:raise ValueError("Empty calibration file")
     args.output_dir.mkdir(parents=True,exist_ok=True)
-    firstdate,p0=samples[0]
-    x0,den0,_=heston_pdf(p0,n_fft=args.n_fft,halfwidth=args.fft_halfwidth,maturity=args.maturity,drift=args.drift)
-    xx0,cc0=cdf(x0,den0);fixed_r=radius(xx0,cc0,args.retained_fraction)
-    print(f"First date {firstdate}: fixed symmetric cutoff +/-{fixed_r:.8f}",flush=True)
-    rows=[];failed=[]
+    first_date,p0=samples[0]
+    x0,pdf0,_=heston_pdf(p0,n_fft=args.n_fft,halfwidth=args.fft_halfwidth,
+                         maturity=args.maturity,drift=args.drift)
+    xx0,cc0=cdf(x0,pdf0)
+    raw_radius=radius(xx0,cc0,args.retained_fraction)
+    mu0,sd0,_,_,_=full_moments(x0,pdf0)
+    std_radius=z_radius(xx0,cc0,mu0,sd0,args.retained_fraction)
+    print(f"First date {first_date}: raw cutoff +/-{raw_radius:.8f}; "
+          f"standardized +/-{std_radius:.5f} SD",flush=True)
+    results=[];failed=[]
     for i,(date,p) in enumerate(samples):
         try:
-            if i==0:x,den,xx,cc=x0,den0,xx0,cc0
+            if i==0:x,den,xx,cc=x0,pdf0,xx0,cc0
             else:
-                x,den,_=heston_pdf(p,n_fft=args.n_fft,halfwidth=args.fft_halfwidth,maturity=args.maturity,drift=args.drift)
+                x,den,_=heston_pdf(p,n_fft=args.n_fft,halfwidth=args.fft_halfwidth,
+                                   maturity=args.maturity,drift=args.drift)
                 xx,cc=cdf(x,den)
-            adaptive_r=radius(xx,cc,args.retained_fraction)
-            _,_,fp,fret=discretize_pdf(x,den,n_qubits=args.qubits,cutoff=fixed_r)
-            _,_,ap,aret=discretize_pdf(x,den,n_qubits=args.qubits,cutoff=adaptive_r)
-            dx=float(x[1]-x[0]);mu=float(np.sum(x*den)*dx)
-            var=float(np.sum((x-mu)**2*den)*dx)
-            kurt=float(np.sum((x-mu)**4*den)*dx/var**2-3)
-            r=dict(date=date,theta=p.theta,kappa=p.kappa,sigma=p.xi,rho=p.rho,v0=p.v0,
-                   fixed_radius=fixed_r,adaptive_radius=adaptive_r,
-                   tail_mass_fixed=1-fret,tail_mass_adaptive=1-aret,
-                   fixed_retained=fret,adaptive_retained=aret,
-                   fixed_bin_width=2*fixed_r/2**args.qubits,
-                   adaptive_bin_width=2*adaptive_r/2**args.qubits,
-                   variance=var,excess_kurtosis=kurt)
-            for w,pr in (("fixed",fp),("adaptive",ap)):
-                r.update({f"{w}_{k}":v for k,v in diagnostics(pr,args.fidelities,args.layers).items()})
-            rows.append(r)
-        except (ValueError,ArithmeticError,FloatingPointError,np.linalg.LinAlgError) as e:
+            mu,sd,var,skew,kurt=full_moments(x,den)
+            r_adaptive=radius(xx,cc,args.retained_fraction)
+            windows=dict(fixed=(-raw_radius,raw_radius),
+                         adaptive=(-r_adaptive,r_adaptive),
+                         standardized=(mu-std_radius*sd,mu+std_radius*sd))
+            row=dict(date=date,theta=p.theta,kappa=p.kappa,sigma=p.xi,
+                     rho=p.rho,v0=p.v0,mean=mu,std_dev=sd,variance=var,
+                     skewness=skew,excess_kurtosis=kurt,
+                     fixed_radius=raw_radius,adaptive_radius=r_adaptive,
+                     standardized_z_radius=std_radius)
+            for z in (2,3,4):
+                row[f"standardized_tail_mass_{z}sigma"]=tail_z(xx,cc,mu,sd,z)
+            for mode,(left,right) in windows.items():
+                probabilities,kept=bin_probs(xx,cc,left,right,args.qubits)
+                row[f"{mode}_retained_mass"]=kept
+                row[f"{mode}_tail_mass"]=1-kept
+                row[f"{mode}_bin_width"]=(right-left)/(2**args.qubits)
+                row.update({f"{mode}_{k}":v for k,v in
+                            diagnostics(probabilities,args.fidelities,args.layers).items()})
+            row["tail_mass_fixed"]=row["fixed_tail_mass"]
+            row["tail_mass_adaptive"]=row["adaptive_tail_mass"]
+            results.append(row)
+        except (ArithmeticError,ValueError,FloatingPointError,np.linalg.LinAlgError) as e:
             failed.append(dict(date=date,error=str(e)))
             if args.fail_fast:raise
         if (i+1)%20==0 or i+1==len(samples):
-            print(f"{i+1}/{len(samples)} dates, {len(rows)} successful, {len(failed)} failed",flush=True)
-    write(args.output_dir/"daily_results.csv",rows)
+            print(f"{i+1}/{len(samples)}; succeeded {len(results)}, failed {len(failed)}",flush=True)
+    write(args.output_dir/"daily_results.csv",results)
     write(args.output_dir/"failures.csv",failed)
-    cor=calculate_corr(rows,args.fidelities,args.layers)
+    if not failed:(args.output_dir/"failures.csv").write_text("date,error\n")
+    cor=calculate_corr(results,args.fidelities,args.layers)
     write(args.output_dir/"correlations.csv",cor)
-    if rows:make_plots(rows,args.output_dir)
-    summary=dict(source=str(args.input),n_input=len(samples),n_success=len(rows),n_failed=len(failed),
-        first_date=firstdate,fixed_symmetric_cutoff=[-fixed_r,fixed_r],
-        retained_fraction=args.retained_fraction,n_qubits=args.qubits,
-        fidelity_thresholds=args.fidelities,n_layers=args.layers,
-        n_fft=args.n_fft,fft_halfwidth=args.fft_halfwidth,
-        maturity=args.maturity,drift=args.drift,
-        tail_mass_median=float(np.median([r["tail_mass_fixed"] for r in rows])) if rows else None,
-        tail_mass_range=[float(min(r["tail_mass_fixed"] for r in rows)),float(max(r["tail_mass_fixed"] for r in rows))] if rows else [],
-        key_correlations=[r for r in cor if r["predictor"]=="tail_mass_fixed" and r["outcome"] in
-            ("fixed_chi_for_995","adaptive_chi_for_995","fixed_max_discarded_chi2","fixed_mps_layer_1_fidelity")],
-        caveat="Comparisons describe correlations, not causality; fixed and adaptive quantum states use different bins.")
+    if results:make_plots(results,args.output_dir)
+    selected=[r for r in cor if r["sample"] in ("all","2019","2020")
+              and r["analysis"]=="levels"
+              and r["predictor"] in ("excess_kurtosis","standardized_tail_mass_3sigma")
+              and r["outcome"] in ("standardized_max_discarded_chi2",
+                                   "standardized_chi_for_995",
+                                   "standardized_mps_layer_1_fidelity",
+                                   "standardized_layers_for_999")]
+    summary=dict(source=str(args.input),n_input=len(samples),
+      n_success=len(results),n_failed=len(failed),first_date=first_date,
+      fixed_symmetric_cutoff=[-raw_radius,raw_radius],
+      standardized_z_radius=std_radius,
+      retained_fraction=args.retained_fraction,n_qubits=args.qubits,
+      fidelity_thresholds=args.fidelities,n_layers=args.layers,
+      n_fft=args.n_fft,fft_halfwidth=args.fft_halfwidth,
+      maturity=args.maturity,drift=args.drift,
+      key_correlations=selected,
+      caveat="Kurtosis and standardized tails measure shape. Correlations are "
+             "observational, serially dependent; standardized encoding changes "
+             "the physical bins.")
     (args.output_dir/"summary.json").write_text(json.dumps(summary,indent=2,allow_nan=False)+"\n")
-    print("Results saved in",args.output_dir,flush=True)
+    print("Overwrote previous results in",args.output_dir.resolve(),flush=True)
     return summary
+
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
