@@ -1,12 +1,14 @@
-"""Benchmark 1-layer, 2-layer and tail-selected MPS preparation.
+"""Compare both tail-based MPS selectors to fixed one-/two-layer workflows.
 
-Uses already computed eight-qubit Heston state fidelities. Does not rerun
-the MPS optimiser: all three workflows use the same saved state preparations.
-2019 is the training set, and 2020 is a held-out evaluation set.
+Uses saved conditional MPS fidelities, without rerunning Heston or MPS.
+Fit the two independent conservative thresholds on 2019 ONLY and evaluate
+on held-out 2020 dates. Defaults to the stricter F_target=0.99842.
 
-Run from repository root:
+From the repo root:
     python -m cutoff_windows.compare_workflows
-    python -m cutoff_windows.compare_workflows --target 0.99835
+    python -m cutoff_windows.compare_workflows --target 0.99845
+
+OVERWRITES existing comparison files in cutoff_windows/.
 """
 from __future__ import annotations
 
@@ -19,8 +21,11 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_DATA = HERE / "daily_results.csv"
-TARGET = 0.99835
-FEATURE = "standardized_tail_mass_3sigma"
+TARGET = 0.99842
+TAIL = "standardized_tail_mass_3sigma"
+KURT = "excess_kurtosis"
+FEATURE_BY_WORKFLOW = {"tail_selector": TAIL, "kurtosis_selector": KURT}
+WORKFLOWS = ("always_one", "always_two", "tail_selector", "kurtosis_selector")
 NOMINAL_CNOTS_PER_TWO_QUBIT_BLOCK = 2
 
 
@@ -28,7 +33,7 @@ def load_rows(path: Path):
     with path.open(newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
     required = (
-        "date", FEATURE, "excess_kurtosis", "standardized_retained_mass",
+        "date", TAIL, KURT, "standardized_retained_mass",
         "standardized_mps_layer_1_fidelity",
         "standardized_mps_layer_2_fidelity",
     )
@@ -47,56 +52,69 @@ def load_rows(path: Path):
     return rows
 
 
-def learn_conservative_cutoff(training, target, feature=FEATURE):
-    """Choose 1 layer only above all known 1-layer failures in 2019.
+def learn_conservative_cutoff(training, target, feature):
+    """Choose 1 layer iff feature is greater than every 2019 failure.
 
-    No evaluation labels influence this cutoff. Requiring a failure in the
-    training set avoids claiming a guarantee from an empty negative class.
+    Both classes must occur in training. In particular, at targets >= about
+    0.99848 the 2019 sample has no successful 1-layer states; refuse to
+    label the resulting degenerate rule a trained selector.
     """
     failures = [
         r[feature] for r in training
         if r["standardized_mps_layer_1_fidelity"] < target
     ]
-    if not failures:
-        raise ValueError("No 1-layer failures in training; cannot calibrate cutoff")
+    successes = [
+        r for r in training
+        if r["standardized_mps_layer_1_fidelity"] >= target
+    ]
+    if not failures or not successes:
+        raise ValueError(
+            f"Training 2019 has {len(successes)} one-layer successes "
+            f"and {len(failures)} failures at F={target}. "
+            "Both classes are needed for this selector protocol. "
+            "Use a lower threshold or train on additional historical data."
+        )
     return max(failures)
 
 
-def choose_layer(row, workflow, cutoff, feature=FEATURE):
+def choose_layer(row, workflow, cutoffs):
     if workflow == "always_one":
         return 1
     if workflow == "always_two":
         return 2
-    if workflow == "tail_selector":
-        return 1 if row[feature] > cutoff else 2
+    if workflow in FEATURE_BY_WORKFLOW:
+        feature = FEATURE_BY_WORKFLOW[workflow]
+        return 1 if row[feature] > cutoffs[workflow] else 2
     raise ValueError(f"Unknown workflow: {workflow}")
 
 
-def benchmark(rows, sample, workflow, cutoff, target, n_qubits, feature=FEATURE):
+def benchmark(rows, sample, workflow, cutoffs, target, n_qubits):
     if not rows:
         raise ValueError(f"Empty sample: {sample}")
     if n_qubits < 2:
         raise ValueError("n_qubits must be at least two")
+    feature = FEATURE_BY_WORKFLOW.get(workflow)
+    cutoff = cutoffs.get(workflow)
     daily = []
     for row in rows:
-        layers = choose_layer(row, workflow, cutoff, feature)
+        layers = choose_layer(row, workflow, cutoffs)
         fidelity = row[f"standardized_mps_layer_{layers}_fidelity"]
         retained = row["standardized_retained_mass"]
         passed = fidelity >= target
-        # Each iterative MPS layer uses (N-1) 2-qubit blocks.
         blocks = layers * (n_qubits - 1)
         nominal_cnot = blocks * NOMINAL_CNOTS_PER_TWO_QUBIT_BLOCK
         daily.append({
             "date": row["date"], "sample": sample, "workflow": workflow,
-            "target_fidelity": target, "feature": feature,
-            "feature_value": row[feature], "train_cutoff": cutoff,
+            "target_fidelity": target, "feature": feature or "",
+            "feature_value": row[feature] if feature else "",
+            "train_cutoff": cutoff if cutoff is not None else "",
             "n_qubits": n_qubits, "chosen_layers": layers,
             "conditional_fidelity": fidelity,
             "standardized_retained_mass": retained,
             "full_domain_fidelity_upper_proxy": retained * fidelity,
             "meets_conditional_target": passed,
             "conditional_shortfall": max(0.0, target - fidelity),
-            "two_qubit_blocks": blocks, "nominal_cnot_count": nominal_cnot
+            "two_qubit_blocks": blocks, "nominal_cnot_count": nominal_cnot,
         })
     fidelities = np.array([r["conditional_fidelity"] for r in daily])
     cnot = np.array([r["nominal_cnot_count"] for r in daily])
@@ -121,7 +139,7 @@ def benchmark(rows, sample, workflow, cutoff, target, n_qubits, feature=FEATURE)
             [r["full_domain_fidelity_upper_proxy"] for r in daily])),
         "total_two_qubit_blocks": int(sum(r["two_qubit_blocks"] for r in daily)),
         "total_nominal_cnots": int(np.sum(cnot)),
-        "mean_nominal_cnots": float(np.mean(cnot))
+        "mean_nominal_cnots": float(np.mean(cnot)),
     }
     return daily, totals
 
@@ -135,8 +153,7 @@ def write_csv(path, rows):
         writer.writerows(rows)
 
 
-def compare(input_path, output_dir, target=TARGET, n_qubits=8,
-            feature=FEATURE):
+def compare(input_path, output_dir, target=TARGET, n_qubits=8):
     if not 0 < target <= 1:
         raise ValueError("Target fidelity must be between 0 and 1")
     rows = load_rows(input_path)
@@ -144,67 +161,86 @@ def compare(input_path, output_dir, target=TARGET, n_qubits=8,
     test = [r for r in rows if r["date"].startswith("2020")]
     if not training or not test:
         raise ValueError("Expected both 2019 training and 2020 held-out states")
-    cutoff = learn_conservative_cutoff(training, target, feature)
+    cutoffs = {workflow: learn_conservative_cutoff(training, target, feature)
+               for workflow, feature in FEATURE_BY_WORKFLOW.items()}
     all_daily = []
     summaries = []
     for sample, group in (("training_2019", training),
                           ("holdout_2020", test),
                           ("all_2019_2020", rows)):
-        for workflow in ("always_one", "always_two", "tail_selector"):
-            d, s = benchmark(group, sample, workflow, cutoff, target,
-                             n_qubits, feature)
-            all_daily.extend(d)
-            summaries.append(s)
+        for workflow in WORKFLOWS:
+            daily, summary = benchmark(group, sample, workflow, cutoffs,
+                                       target, n_qubits)
+            all_daily.extend(daily)
+            summaries.append(summary)
     holdout = {r["workflow"]: r for r in summaries
                if r["sample"] == "holdout_2020"}
-    selector = holdout["tail_selector"]
     one = holdout["always_one"]
     two = holdout["always_two"]
-    conclusions = {
-        "cnot_saving_vs_two": 1 - selector["total_nominal_cnots"] /
-                              two["total_nominal_cnots"],
-        "cnot_increase_vs_one": selector["total_nominal_cnots"] /
-                                 one["total_nominal_cnots"] - 1,
-        "fidelity_failure_reduction_vs_one":
-            one["states_below_target"] - selector["states_below_target"],
-        "selector_all_pass": selector["states_below_target"] == 0,
-        "selector_cheaper_than_two": selector["total_nominal_cnots"] <
-                                     two["total_nominal_cnots"],
-        "selector_cheaper_than_one": selector["total_nominal_cnots"] <
-                                     one["total_nominal_cnots"]
-    }
+    conclusions = {}
+    for name in FEATURE_BY_WORKFLOW:
+        selector = holdout[name]
+        conclusions[name] = {
+            "cnot_saving_vs_two":
+                1 - selector["total_nominal_cnots"] / two["total_nominal_cnots"],
+            "cnot_increase_vs_one":
+                selector["total_nominal_cnots"] / one["total_nominal_cnots"] - 1,
+            "fidelity_failure_reduction_vs_one":
+                one["states_below_target"] - selector["states_below_target"],
+            "selector_all_pass": selector["states_below_target"] == 0,
+            "selector_cheaper_than_two":
+                selector["total_nominal_cnots"] < two["total_nominal_cnots"],
+            "selector_cheaper_than_one":
+                selector["total_nominal_cnots"] < one["total_nominal_cnots"],
+            "unnecessary_two_layer_dates":
+                sum(r["chosen_layers"] == 2 and
+                    next(x for x in test if x["date"] == r["date"])[
+                        "standardized_mps_layer_1_fidelity"] >= target
+                    for r in all_daily
+                    if r["sample"] == "holdout_2020" and
+                       r["workflow"] == name),
+        }
     output_dir.mkdir(parents=True, exist_ok=True)
     write_csv(output_dir / "workflow_comparison_daily.csv", all_daily)
     write_csv(output_dir / "workflow_comparison_summary.csv", summaries)
     summary = {
         "training_period": "2019", "evaluation_period": "2020",
-        "target_fidelity": target, "feature": feature,
-        "learned_training_cutoff": cutoff, "n_qubits": n_qubits,
+        "target_fidelity": target,
+        "selector_features": FEATURE_BY_WORKFLOW,
+        "learned_training_cutoffs": cutoffs,
+        "n_qubits": n_qubits,
         "nominal_cnot_per_two_qubit_block": NOMINAL_CNOTS_PER_TWO_QUBIT_BLOCK,
-        "source_daily_results": str(input_path), "comparisons": summaries,
+        "source_daily_results": str(input_path),
+        "comparisons": summaries,
         "holdout_conclusions": conclusions,
         "caveats": [
             "Saved conditional fidelities were reused; no circuits were re-optimised.",
             "CNOT counts are nominal (2 per real two-qubit MPS gate), not compiled hardware counts.",
-            "No overhead is charged for evaluating the distributional feature.",
-            "Retained mass times conditional fidelity is an idealised full-domain overlap proxy, not a measured full-domain circuit fidelity.",
-            "The selector is trained only on 2019; 2020 is held out.",
-            "The selector optimises fidelity compliance and gate usage, not maximum attainable fidelity."
-        ]
+            "No overhead is charged for computing distributional predictors.",
+            "Retained mass times conditional fidelity is a full-domain overlap proxy, not a measured full-domain fidelity.",
+            "Both selector cutoffs are trained only on 2019; 2020 is held out.",
+            "Results depend on the target fidelity and sampled Heston regime.",
+        ],
     }
     (output_dir / "workflow_comparison_summary.json").write_text(
-        json.dumps(summary, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-    print("2020 holdout (target F = {:.5f})".format(target))
-    print("Rule: select 1 layer if {} > {:.12f}; else 2".format(feature, cutoff))
-    print("{:<17} {:>10} {:>10} {:>14} {:>15}".format(
-        "Workflow", "Passes", "CNOTs", "Mean fidelity", "Mean CNOTs"))
-    for name in ("always_one", "always_two", "tail_selector"):
+        json.dumps(summary, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8")
+    print(f"2020 holdout: {len(test)} states, target F={target:.6f}")
+    print(f"2019 training: {len(training)} states; one-layer successes: "
+          f"{sum(r['standardized_mps_layer_1_fidelity'] >= target for r in training)}")
+    for name, cut in cutoffs.items():
+        print(f"{name}: one layer if {FEATURE_BY_WORKFLOW[name]} > {cut:.12f}")
+    print(f"{'Workflow':<19} {'Pass/total':>11} {'2 layers':>9} "
+          f"{'Mean F':>12} {'CNOT total':>11} {'CNOT/state':>11}")
+    for name in WORKFLOWS:
         result = holdout[name]
-        print("{:<17} {:>4}/{:<5} {:>10} {:>14.9f} {:>15.3f}".format(
-            name, result["states_meeting_target"], result["n_states"],
-            result["total_nominal_cnots"], result["mean_conditional_fidelity"],
-            result["mean_nominal_cnots"]))
-    print("Saved comparisons in", output_dir.resolve())
+        print(f"{name:<19} {result['states_meeting_target']:>3}/"
+              f"{result['n_states']:<7} {result['two_layer_states']:>9} "
+              f"{result['mean_conditional_fidelity']:>12.9f} "
+              f"{result['total_nominal_cnots']:>11} "
+              f"{result['mean_nominal_cnots']:>11.3f}")
+    print("Overwrote workflow_comparison_daily.csv, "
+          "workflow_comparison_summary.csv and workflow_comparison_summary.json")
     return summary
 
 
@@ -214,10 +250,8 @@ def main():
     p.add_argument("--output-dir", type=Path, default=HERE)
     p.add_argument("--target", type=float, default=TARGET)
     p.add_argument("--qubits", type=int, default=8)
-    p.add_argument("--feature", choices=(FEATURE, "excess_kurtosis"),
-                   default=FEATURE)
     args = p.parse_args()
-    compare(args.input, args.output_dir, args.target, args.qubits, args.feature)
+    compare(args.input, args.output_dir, args.target, args.qubits)
 
 
 if __name__ == "__main__":
