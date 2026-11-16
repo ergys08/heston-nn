@@ -1,8 +1,10 @@
-# Fixed-cutoff versus adaptive-cutoff Heston MPS study
+# Heston tail-shape versus MPS-complexity experiment
 
-This experiment analyses the **505 real SPX-return-calibrated Heston parameter sets**, 2019-01-02 through 2020-12-31, in `heston/SPX_generated_heston_params_2019_2020.csv`. It uses the existing `heston` Fourier inversion and `MPS` preparation modules. These are **return-fitted** Heston calibrations under the physical measure, not the original risk-neutral/option-fitted 2013 parameters.
+The experiment analyses the same **505 actual SPX-return-fitted Heston calibrations** (2019-01-02 to 2020-12-31). Return-based estimates are under the physical measure, **not** the original option-implied risk-neutral measure.
 
-## Run (from repository root)
+## Run locally
+
+From the root of `heston-nn`:
 
 ```bash
 git pull origin main
@@ -13,36 +15,46 @@ python -m cutoff_windows.run_experiment \
   --output-dir cutoff_windows
 ```
 
-The default full run analyses 505 trading dates. For a quick smoke test that does not overwrite full-run outputs:
+**The script overwrites the existing** `cutoff_windows/daily_results.csv`, `correlations.csv`, `summary.json`, `timeline.png`, and `correlation.png`. It also refreshes `failures.csv`. It never modifies the original Heston calibration CSV. A short smoke test with separate outputs:
 
 ```bash
-python -m cutoff_windows.run_experiment --max-states 10 --output-dir cutoff_windows/smoke
+python -m cutoff_windows.run_experiment --max-states 5 --output-dir cutoff_windows/smoke
 ```
 
-The full run writes **all outputs into `cutoff_windows/`**:
+## Main question: does genuine tail shape predict MPS complexity?
 
-* `daily_results.csv` — dated parameters, fixed and adaptive cutoffs, probability lost, variance, excess kurtosis, seven-bond Schmidt ranks, discarded Schmidt weights, effective MPS bond dimension at fidelities 0.99, 0.995 and 0.999, and actual iterative 1–3-layer MPS fidelities.
-* `correlations.csv` — Pearson and Spearman coefficients comparing tail mass, adaptive cutoff radius and shape parameters against MPS complexity measures.
-* `summary.json` — exact run settings and selected correlations.
-* `timeline.png` and `correlation.png` — visualisations.
-* `failures.csv` — failed PDF/spectral checks, if any.
+The original experiment defined tail weight as probability outside a **fixed raw-return interval**. That variable was almost perfectly correlated with return variance, and so was not a clean measure of heavy-tailedness.
 
-## Cutoff selection
+The revised experiment uses **two full-distribution, location/scale-invariant predictors**:
 
-The **first date** determines a symmetric interval `[-R0,+R0]` containing 99.9% of its full terminal log-return probability. The same `R0` is used for every date. The fixed-window tail weight is `1 - P(|X|<=R0)`, *before renormalisation*.
+- **Excess kurtosis**: `E[((X-mu)/sd)^4] - 3`. Gaussian baseline = 0.
+- **Standardised tail mass**: `P(|X-mu| > 3 sd)`, plus thresholds at 2 and 4 standard deviations. A Gaussian's three-sigma tail mass is approximately 0.00270. For a skewed Heston density this combines left and right tails; skewness is also recorded separately.
 
-For comparison, each date gets an **independently selected smallest symmetric** `[-Rt,+Rt]` retaining 99.9% of its own probability. Both windows are converted to **8-qubit quantum states (256 probability-bin amplitudes)**, using precisely your existing Heston PDF discretisation code. The adaptive window's tail mass is ~0.001 by construction, so use the fixed-window mass loss or adaptive radius as predictors.
+These statistics are calculated from the *untruncated* Fourier-inverted Heston density, not from the conditionally renormalised state.
 
-Default physical settings: maturity = 1 year, drift = 0.05, FFT halfwidth = 25, FFT points = 131072, 8 qubits. The larger FFT domain helps prevent falsely reporting probability loss because the Fourier inversion domain is too narrow.
+### Three preparation domains (all use the same qubit count)
 
-## MPS complexity measures
+1. **`standardized` (primary analysis):** On the first date, choose the smallest interval symmetric around the mean in **standard deviation units** containing 99.9% of that date's probability. Hold that dimensionless radius `z0` constant for every date and encode each density on `[mu_t-z0*sd_t,mu_t+z0*sd_t]`. Thus each state has exactly the same z-domain and z-bin width, eliminating changes in location and scale.
+2. **`fixed` (legacy control):** Keep the first date's symmetric *raw log-return* interval `[-R0,R0]` unchanged over time.
+3. **`adaptive` (legacy control):** On each date, choose its own smallest symmetric *raw log-return* interval containing 99.9% probability.
 
-`*_max_exact_bond_dimension` is the maximum **numerical Schmidt rank** among seven qubit bipartitions; numerical ranks often saturate at full rank.
+`standardized_tail_mass_3sigma` is the probability beyond **three standard deviations**, regardless of the narrower/wider cutoff used for quantum encoding. `standardized_tail_mass` and kurtosis are *predictors*, whereas MPS bond dimensions and circuit fidelities are outcomes.
 
-More useful quantities are `*_max_discarded_chi2` (largest across-bond probability weight beyond the first two Schmidt coefficients), `*_chi_for_995` (smallest allowed TT-SVD bond dimension giving fidelity >=0.995), and `*_layers_for_995` (smallest **tested** iterative MPS layer count reaching fidelity >=0.995; blank if three layers do not suffice). The number of layers is a *measured result*, not equal by definition to an MPS bond dimension.
+## Results written
 
-## Interpretation
+- `daily_results.csv`: date, model parameters, full-distribution mean/SD/variance/skewness/excess kurtosis, standardised tail masses (2/3/4 sigma), all three cutoff windows' retained masses and widths, exact Schmidt ranks, discarded `chi=2` weights, MPS-bond entropies, minimum TT-SVD bond dimension at the configured fidelities, and iterative MPS fidelities for 1–3 layers.
+- `correlations.csv`: Pearson and Spearman correlations, with `sample` = `all`, `2019`, or `2020`, and `analysis` = `levels` or `first_difference`. First differences avoid crossing the year boundary. Undefined correlations are blank.
+- `summary.json`: configuration and highlighted shape/complexity correlations.
+- `timeline.png`: chronological kurtosis, standardised tail probability and one-layer fidelities.
+- `correlation.png`: full-distribution excess kurtosis against standardised-state Schmidt truncation, effective rank and one-layer fidelity.
+- `failures.csv`: failed calibration dates, if any.
 
-Tail loss and MPS difficulty need **not** be positively correlated. Cutting off heavy tails changes and renormalises the prepared state, and may remove complex tail structure. The fixed and adaptive windows also have **different bin widths**. Mass loss can arise from higher variance even without larger standardised kurtosis. Treat correlation as observational, especially because successive calibrated parameters are temporally dependent.
+`*_chi_for_995` refers to the TT-SVD approximation at fidelity 0.995; `*_layers_for_995` is the number of **tested iterative circuit layers** required for the same fidelity, or blank if not reached. Numerical maximum Schmidt rank is often uninformative because it saturates.
 
-Override the 99.9% mass requirement with `--retained-fraction 0.9999`, change `--layers 4`, or compare `--qubits 10`. The cutoff is always selected from the first date of the input (or subset), not manually specified.
+## Limitations
+
+Excess kurtosis is not the only definition of heavy tails: it is sensitive to the fourth moment and may also reflect features outside the far tails. Standardised tail probability at 3 SD is a complementary, direct measure of tail weight at a fixed z threshold. Skewness and the interplay of left/right tails can also matter.
+
+All the state targets are conditional on the chosen encoding window. When the standardised window retains different fractions across dates, preparation fidelity refers to the **conditional quantum state**, not the full real-line density. A distribution's standardisation does not guarantee identical MPS difficulty. Successive market calibrations are highly autocorrelated, so naive significance tests or a pooled correlation should not be interpreted as independent evidence or causation. Comparing 2019 and 2020 separately, and using first differences, is more informative.
+
+To change fidelity: `--fidelities 0.99 0.995 0.999`; qubits: `--qubits 10`; iterative layers: `--layers 4`; first-date retained probability: `--retained-fraction 0.9999`.
